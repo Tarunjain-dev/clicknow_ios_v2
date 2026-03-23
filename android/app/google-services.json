@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "429039538668",
+    "project_id": "clicknow-4f0d3",
+    "storage_bucket": "clicknow-4f0d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:429039538668:android:44ee59cc2b2bb5fa1f70c9",
+        "android_client_info": {
+          "package_name": "click.now"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_rgAaziPzInxP6o7baYQqwH7lFLfLA6c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:429039538668:android:9fc25beb169afc1d1f70c9",
+        "android_client_info": {
+          "package_name": "com.example.clicknow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_rgAaziPzInxP6o7baYQqwH7lFLfLA6c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:429039538668:android:e31a010a45ab853e1f70c9",
+        "android_client_info": {
+          "package_name": "com.example.clicknow_version2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_rgAaziPzInxP6o7baYQqwH7lFLfLA6c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
