@@ -6,10 +6,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class AdminMiddleware extends GetMiddleware {
-  AdminMiddleware({this.priority = 0});
-
-  @override
-  final int priority;
+  AdminMiddleware({int priority = 0}) : super(priority: priority);
 
   final GetStorage _storage = GetStorage();
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,7 +17,11 @@ class AdminMiddleware extends GetMiddleware {
       return const RouteSettings(name: AppRoutes.loginRoute);
     }
     final role = _storage.read('userRole');
-    if (role is! String || role != AppConstants.adminRole) {
+    final rbacRole = _storage.read('rbacRole');
+    final isAdmin =
+        (role is String && role == AppConstants.adminRole) ||
+        (rbacRole is String && rbacRole == AppConstants.adminRole);
+    if (!isAdmin) {
       return const RouteSettings(name: AppRoutes.loginRoute);
     }
     return null;

@@ -1,7 +1,13 @@
 import 'package:clicknow_version2/app/screens/professional/getx/professionalRegistrationController.dart';
 import 'package:clicknow_version2/app/screens/professional/getx/stepper_controller.dart';
+import 'package:clicknow_version2/app/screens/professional/professionalRegistration/professional_location_picker_screen.dart';
+import 'package:clicknow_version2/app/screens/professional/professionalRegistration/widgets/address_preview_card.dart';
+import 'package:clicknow_version2/app/screens/professional/professionalRegistration/widgets/location_search_field.dart';
+import 'package:clicknow_version2/app/screens/professional/professionalRegistration/widgets/map_picker_widget.dart';
+import 'package:clicknow_version2/app/services/maps_service.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
-import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
+import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -19,131 +25,139 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
   final stepperController = Get.find<StepperController>();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      professionalRegController.initializeStep2Location();
+    });
+  }
+
+  Future<void> _openLargeMapPicker() async {
+    if (!professionalRegController.isMapApiConfigured) {
+      return;
+    }
+
+    final selectedLatitude = professionalRegController.selectedLatitude.value;
+    final selectedLongitude = professionalRegController.selectedLongitude.value;
+    AddressSelection? initialSelection;
+
+    if (selectedLatitude != null && selectedLongitude != null) {
+      initialSelection = AddressSelection(
+        formattedAddress: professionalRegController.permanentAddressController.text.trim(),
+        state: professionalRegController.selectedState.value,
+        city: professionalRegController.selectedCity.value,
+        pincode: professionalRegController.selectedPincode.value,
+        latitude: selectedLatitude,
+        longitude: selectedLongitude,
+      );
+    }
+
+    final pickedLocation = await Get.to<AddressSelection>(
+      () => ProfessionalLocationPickerScreen(
+        initialCenterLatitude: professionalRegController.mapCenterLatitude.value,
+        initialCenterLongitude: professionalRegController.mapCenterLongitude.value,
+        initialSelection: initialSelection,
+      ),
+      fullscreenDialog: true,
+    );
+
+    if (pickedLocation == null) {
+      return;
+    }
+
+    await professionalRegController.applyAddressSelectionFromPicker(
+      pickedLocation,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
 
-    /// -- Scaling Utility Instance
-    final scale = ScalingUtility(context: context);
-    scale.setCurrentDeviceSize();
+    /// -- Dark mode instance
+    final isDark = HelperFunctions.isDarkMode(context);
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+      padding: ResponsiveUtility.only(top: 16, right: 16, left: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
       child: Form(
         key: _formKey,
         child: Column(
           children: [
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: const Color(0xff1C1736).withValues(alpha: 0.5),
-                border: Border.all(color: const Color(0xff1E2939)),
+                borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
+                color: isDark ? Color(0xff1C1736).withValues(alpha: 0.5) : Color(0xffFCFBFF),
+                border:Border.all(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   /// Step 2 Title and Description
                   Padding(
-                    padding: EdgeInsets.fromLTRB(10, 10, 10, 4),
+                    padding: ResponsiveUtility.only(top: 10, right: 10, left: 10, bottom: 4),
                     child: Text(
                       "Tell Us About Yourself",
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: scale.getScaledFont(20),
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: ResponsiveUtility.fontSize(16),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
+                  Padding(
+                    padding: ResponsiveUtility.symmetric(horizontal: 10),
                     child: Text(
                       "Help us Know you better with some basic information.",
-                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                      style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black.withValues(alpha: 0.6), fontSize: ResponsiveUtility.fontSize(12),),
                     ),
                   ),
-                  const Divider(color: Color(0xff1E2939), thickness: 2),
+                  Divider(color:  isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), thickness: 1),
 
                   Padding(
-                    padding: const EdgeInsets.all(10),
+                    padding: ResponsiveUtility.all(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+
                         /// FULL NAME
-                        const Text(
-                          "Full Name",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
+                        Text("Full Name", style: TextStyle(color: isDark ? Colors.white : Colors.black,),),
+                        SizedBox(height: ResponsiveUtility.height(2)),
                         TextFormField(
                           controller: professionalRegController.nameController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: _inputDecoration("Enter your full name"),
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black,),
+                          decoration: _inputDecoration("Enter your full name", isDark),
                         ),
-
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// GENDER DROPDOWN
-                        const Text(
-                          "Gender",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
-
+                        Text("Gender", style: TextStyle(color: isDark ? Colors.white : Colors.black),),
+                        SizedBox(height: ResponsiveUtility.height(2)),
                         Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(hintColor: Color(0xff5B6274)),
+                          data: Theme.of(context,).copyWith(hintColor: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6)),
                           child: Obx(
                             () => DropdownButtonFormField<String>(
-                              initialValue:
-                                  professionalRegController
-                                      .selectedGender
-                                      .value
-                                      .isEmpty
-                                  ? null
-                                  : professionalRegController
-                                        .selectedGender
-                                        .value,
-                              dropdownColor: const Color(0xff1C1736),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
+                              initialValue: professionalRegController.selectedGender.value.isEmpty ? null : professionalRegController.selectedGender.value,
+                              dropdownColor: isDark ? Color(0xff1C1736) : Colors.white,
+                              style: TextStyle(fontSize: ResponsiveUtility.fontSize(14),),
                               items: professionalRegController.genderOptions
                                   .map(
                                     (gender) => DropdownMenuItem(
                                       value: gender,
-                                      child: Text(
-                                        gender,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                      child: Text(gender, style: TextStyle(color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),),),
                                     ),
-                                  )
-                                  .toList(),
+                                  ).toList(),
                               onChanged: (value) {
-                                professionalRegController.selectedGender.value =
-                                    value ?? "";
+                                professionalRegController.selectedGender.value = value ?? "";
                               },
-                              decoration: _dropdownDecoration("Select gender"),
+                              decoration: _inputDecoration("Select gender", isDark),
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// DATE OF BIRTH
-                        const Text(
-                          "Date of Birth",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
-
+                        Text("Date of Birth", style: TextStyle(color: isDark ? Colors.white : Colors.black,),),
+                        SizedBox(height: ResponsiveUtility.height(6)),
                         Obx(
                           () => InkWell(
                             onTap: () async {
@@ -152,263 +166,122 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                                 initialDate: DateTime(2000),
                                 firstDate: DateTime(1950),
                                 lastDate: DateTime.now(),
+                                barrierColor: Colors.black.withValues(alpha: 0.6),
                               );
                               if (picked != null) {
-                                professionalRegController.selectedDob.value =
-                                    picked;
+                                professionalRegController.selectedDob.value = picked;
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 14,
-                              ),
-                              decoration: _containerDecoration(),
+                              padding: ResponsiveUtility.symmetric(horizontal: 14, vertical: 12),
+                              decoration: _containerDecoration(isDark),
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.calendar_month,
-                                    color: Colors.white54,
+                                    color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),
                                   ),
-                                  const SizedBox(width: 10),
+                                  SizedBox(width: ResponsiveUtility.width(10)),
                                   Text(
-                                    professionalRegController
-                                                .selectedDob
-                                                .value ==
-                                            null
-                                        ? "Select date of birth"
-                                        : DateFormat("dd MMM yyyy").format(
-                                            professionalRegController
-                                                .selectedDob
-                                                .value!,
-                                          ),
-                                    style: const TextStyle(color: Colors.white),
+                                    professionalRegController.selectedDob.value == null
+                                    ? "Select date of birth"
+                                    : DateFormat("dd MMM yyyy").format(professionalRegController.selectedDob.value!,),
+                                    style: TextStyle(color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),),
                                   ),
                                 ],
                               ),
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// PERMANENT ADDRESS
-                        const Text(
-                          "Permanent Address",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: professionalRegController
-                              .permanentAddressController,
-                          maxLines: 3,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: _inputDecoration(
-                            "Enter your complete address",
+                        Text("Permanent Address", style: TextStyle(color: isDark ? Colors.white : Colors.black),),
+                        SizedBox(height: ResponsiveUtility.height(6)),
+                        Obx(
+                          () => LocationSearchField(
+                            controller: professionalRegController.permanentAddressController,
+                            onChanged: professionalRegController.onAddressSearchChanged,
+                            onSuggestionTap: professionalRegController.selectAddressSuggestion,
+                            suggestions: professionalRegController.placeSuggestions,
+                            isSearching: professionalRegController.isSearchingPlaces.value,
+                            onUseCurrentLocation: professionalRegController.useCurrentLocationForAddress,
+                            isFetchingCurrentLocation: professionalRegController.isFetchingCurrentLocation.value,
+                            isDark: isDark,
                           ),
                         ),
+                        SizedBox(height: ResponsiveUtility.height(16)),
 
-                        const SizedBox(height: 16),
-
-                        /// STATE
-                        const Text(
-                          "State",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
-                        Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(hintColor: Color(0xff5B6274)),
-                          child: Obx(
-                            () => DropdownButtonFormField<String>(
-                              initialValue:
-                                  professionalRegController
-                                      .selectedState
-                                      .value
-                                      .isEmpty
-                                  ? null
-                                  : professionalRegController
-                                        .selectedState
-                                        .value,
-                              dropdownColor: const Color(0xff1C1736),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                              items: professionalRegController.stateOptions
-                                  .map(
-                                    (state) => DropdownMenuItem(
-                                      value: state,
-                                      child: Text(
-                                        state,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged:
-                                  professionalRegController.onStateChanged,
-                              decoration: _dropdownDecoration("Select state"),
-                            ),
+                        Obx(
+                          () => AddressPreviewCard(
+                            formattedAddress: professionalRegController.permanentAddressController.text,
+                            city: professionalRegController.selectedCity.value,
+                            state: professionalRegController.selectedState.value,
+                            country: professionalRegController.selectedCountry.value,
+                            pincode: professionalRegController.selectedPincode.value,
+                            latitude: professionalRegController.selectedLatitude.value,
+                            longitude: professionalRegController.selectedLongitude.value,
                           ),
                         ),
+                        SizedBox(height: ResponsiveUtility.height(16)),
 
-                        const SizedBox(height: 16),
-
-                        /// CITY
-                        const Text(
-                          "City",
-                          style: TextStyle(color: Colors.white),
+                        Obx(
+                          () => MapPickerWidget(
+                            centerLatitude: professionalRegController.mapCenterLatitude.value,
+                            centerLongitude: professionalRegController.mapCenterLongitude.value,
+                            selectedLatitude: professionalRegController.selectedLatitude.value,
+                            selectedLongitude: professionalRegController.selectedLongitude.value,
+                            isResolvingAddress: professionalRegController.isResolvingAddressFromMap.value,
+                            onLocationChanged: (double latitude, double longitude,) {
+                              return professionalRegController.onMapLocationChanged(latitude: latitude, longitude: longitude,);
+                            },
+                            onConfirmLocation: professionalRegController.confirmSelectedLocation,
+                            canConfirmLocation: professionalRegController.hasSelectedLocation,
+                            showMap: professionalRegController.isMapApiConfigured,
+                            fallbackMessage:
+                                "Google Maps API key is missing.\n"
+                                "Please set ApiConstants.googleMapsApiKey.",
+                            onOpenExpandedMap: professionalRegController.isMapApiConfigured ? _openLargeMapPicker : null,
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(hintColor: Color(0xff5B6274)),
-                          child: Obx(() {
-                            final cities =
-                                professionalRegController.currentCityOptions;
-                            return DropdownButtonFormField<String>(
-                              initialValue:
-                                  professionalRegController
-                                      .selectedCity
-                                      .value
-                                      .isEmpty
-                                  ? null
-                                  : professionalRegController
-                                        .selectedCity
-                                        .value,
-                              dropdownColor: const Color(0xff1C1736),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                              items: cities
-                                  .map(
-                                    (city) => DropdownMenuItem(
-                                      value: city,
-                                      child: Text(
-                                        city,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: cities.isEmpty
-                                  ? null
-                                  : professionalRegController.onCityChanged,
-                              decoration: _dropdownDecoration("Select City"),
-                            );
-                          }),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        /// PINCODE
-                        const Text(
-                          "Pincode",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
-                        Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(hintColor: Color(0xff5B6274)),
-                          child: Obx(() {
-                            final pincodes =
-                                professionalRegController.currentPincodeOptions;
-                            return DropdownButtonFormField<String>(
-                              initialValue:
-                                  professionalRegController
-                                      .selectedPincode
-                                      .value
-                                      .isEmpty
-                                  ? null
-                                  : professionalRegController
-                                        .selectedPincode
-                                        .value,
-                              dropdownColor: const Color(0xff1C1736),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                              items: pincodes
-                                  .map(
-                                    (pin) => DropdownMenuItem(
-                                      value: pin,
-                                      child: Text(
-                                        pin,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: pincodes.isEmpty
-                                  ? null
-                                  : (val) {
-                                      professionalRegController
-                                              .selectedPincode
-                                              .value =
-                                          val ?? "";
-                                    },
-                              decoration: _dropdownDecoration("Select pincode"),
-                            );
-                          }),
-                        ),
-
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// LANGUAGES
-                        const Text(
-                          "Languages Known",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 6),
+                        Text("Languages Known", style: TextStyle(color: isDark ? AppColors.white : Colors.black),),
+                        SizedBox(height: ResponsiveUtility.height(6)),
 
                         Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: _containerDecoration(),
+                          padding: ResponsiveUtility.all(10),
+                          width: double.infinity,
+                          decoration: _containerDecoration(isDark),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
+                                spacing: ResponsiveUtility.width(8),
+                                runSpacing: ResponsiveUtility.width(8),
                                 children: professionalRegController
                                     .languageOptions
                                     .map((lang) {
                                       return Obx(() {
-                                        bool isSelected =
-                                            professionalRegController
-                                                .selectedLanguages
-                                                .contains(lang);
-
+                                        bool isSelected = professionalRegController.selectedLanguages.contains(lang);
                                         return GestureDetector(
-                                          onTap: () => professionalRegController
-                                              .toggleLanguage(lang),
+                                          onTap: () => professionalRegController.toggleLanguage(lang),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 8,
-                                            ),
+                                            padding: ResponsiveUtility.symmetric(horizontal: 14, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? const Color(0xff360248)
-                                                  : const Color(0xff2A2E3F),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
+                                              color: isSelected ?
+                                              isDark ? AppColors.purple3 : Color(0xff9810FA) :
+                                              isDark ? Color(0xff2A2E3F) : Colors.white,
+                                              borderRadius: BorderRadius.circular(20),
                                             ),
                                             child: Text(
                                               lang,
-                                              style: const TextStyle(
-                                                color: Colors.white,
+                                              style: TextStyle(
+                                                color: isSelected ?
+                                                Colors.white :
+                                                isDark ? Colors.white70 : Color(0xff6F5F5F),
+                                                fontWeight: FontWeight.w600,
                                               ),
                                             ),
                                           ),
@@ -420,41 +293,27 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
                               /// Divider + Selected Text
                               Obx(() {
-                                if (professionalRegController
-                                    .selectedLanguages
-                                    .isEmpty) {
+                                if (professionalRegController.selectedLanguages.isEmpty) {
                                   return const SizedBox();
                                 }
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const SizedBox(height: 12),
-                                    const Divider(color: Color(0xff1E2939)),
-                                    const SizedBox(height: 8),
+                                    SizedBox(height: ResponsiveUtility.height(10)),
+                                    Divider(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
+                                    SizedBox(height: ResponsiveUtility.height(8)),
                                     Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          "Selected : ",
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.8,
-                                            ),
-                                          ),
-                                        ),
+                                        Text("Selected : ", style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.8,) : Colors.black.withValues(alpha: 0.6),),),
                                         Expanded(
                                           child: Text(
-                                            professionalRegController
-                                                .selectedLanguages
-                                                .join(", "),
+                                            professionalRegController.selectedLanguages.join(", "),
                                             maxLines: 3,
                                             softWrap: true,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: Colors.purpleAccent,
-                                            ),
+                                            style: const TextStyle(color: AppColors.primaryColor,),
                                           ),
                                         ),
                                       ],
@@ -470,7 +329,7 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                   ),
 
                   /// -- back and Continue Buttons
-                  const Divider(color: Color(0xff1E2939), height: 2),
+                  Divider(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), height: 2),
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -478,30 +337,26 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                         bottomLeft: Radius.circular(10),
                         bottomRight: Radius.circular(10),
                       ),
-                      color: const Color(0xff101425),
+                      color: isDark ? Color(0xff101425) : Color(0xffF6F6F6),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0,
-                        vertical: 20.0,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
+
                           /// -- Back Button
                           Expanded(
                             child: SizedBox(
-                              height: scale.getScaledHeight(40),
+                              height: ResponsiveUtility.height(40),
                               child: ElevatedButton(
-                                onPressed: () =>
-                                    stepperController.previousStep(),
+                                onPressed: () => stepperController.previousStep(),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xff13182C),
+                                  elevation: 0,
+                                  backgroundColor: isDark ? Color(0xff13182C) : Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadiusGeometry.circular(
-                                      10,
-                                    ),
-                                    side: BorderSide(color: Color(0xff1E2939)),
+                                    borderRadius: BorderRadiusGeometry.circular(10),
+                                    side: BorderSide(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
                                   ),
                                 ),
                                 child: Row(
@@ -509,16 +364,16 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                                   children: [
                                     Icon(
                                       Icons.arrow_back,
-                                      color: Colors.white,
-                                      size: 22,
+                                      color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),
+                                      size: 16,
                                     ),
-                                    SizedBox(width: scale.getScaledWidth(8)),
+                                    SizedBox(width: ResponsiveUtility.width(8)),
                                     Text(
                                       "Back",
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),
                                         fontWeight: FontWeight.bold,
-                                        fontSize: scale.getScaledFont(14),
+                                        fontSize: ResponsiveUtility.fontSize(14),
                                       ),
                                     ),
                                   ],
@@ -528,34 +383,39 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                           ),
 
                           /// -- Continue Button
-                          SizedBox(width: scale.getScaledWidth(8)),
+                          SizedBox(width: ResponsiveUtility.width(8)),
                           Expanded(
                             child: SizedBox(
-                              height: scale.getScaledHeight(40),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (professionalRegController
-                                      .validateStep2()) {
-                                    stepperController.nextStep();
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadiusGeometry.circular(
-                                      10,
+                              height: ResponsiveUtility.height(40),
+                              child: Obx(() {
+                                final canContinue = professionalRegController.hasSelectedLocation && !professionalRegController.isResolvingAddressFromMap.value;
+
+                                return ElevatedButton(
+                                  onPressed: !canContinue
+                                      ? null
+                                      : () async {
+                                          if (professionalRegController.validateStep2()) {
+                                            await professionalRegController.saveDraftForStep(1);
+                                            await professionalRegController.saveStep2ProfileToFirestore();
+                                            await stepperController.completeStepAndContinue(1);
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadiusGeometry.circular(10,),
                                     ),
                                   ),
-                                ),
-                                child: Text(
-                                  "Continue",
-                                  style: TextStyle(
-                                    color: AppColors.purple3,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: scale.getScaledFont(14),
+                                  child: Text(
+                                    "Continue",
+                                    style: TextStyle(
+                                      color: isDark ? AppColors.purple3 : Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: ResponsiveUtility.fontSize(14),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              }),
                             ),
                           ),
                         ],
@@ -571,35 +431,45 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
+  InputDecoration _inputDecoration(String hint, bool isDark) {
     return InputDecoration(
       filled: true,
-      fillColor: const Color(0xff1C1736).withValues(alpha: 0.8),
-      labelStyle: TextStyle(color: Colors.white, fontSize: 14),
+      fillColor: isDark ? Color(0xff1C1736).withValues(alpha: 0.5) : Color(0xffF6F4FF).withValues(alpha: 0.8),
       hintText: hint,
-      // helperStyle: TextStyle(color: Colors.white, fontSize: ),
-      hintStyle: const TextStyle(color: Color(0xff5B6274)),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      hintStyle: TextStyle(
+        color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),
+        fontSize: ResponsiveUtility.fontSize(12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+          width: 1.2,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+          width: 1.5,
+        ),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+          width: 1.2,
+        ),
+      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),),
     );
   }
 
-  InputDecoration _dropdownDecoration(String hint) {
-    return InputDecoration(
-      filled: true,
-      fillColor: const Color(0xff1C1736).withValues(alpha: 0.8),
-      labelStyle: const TextStyle(color: Colors.white, fontSize: 14),
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xff5B6274)),
-      helperStyle: const TextStyle(color: Colors.white, fontSize: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-    );
-  }
-
-  BoxDecoration _containerDecoration() {
+  BoxDecoration _containerDecoration(bool isDark) {
     return BoxDecoration(
-      borderRadius: BorderRadius.circular(10),
-      color: const Color(0xff1C1736).withValues(alpha: 0.8),
-      border: Border.all(color: const Color(0xff1E2939)),
+      borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
+      color: isDark ? Color(0xff1C1736).withValues(alpha: 0.8) : Color(0xffF6F4FF).withValues(alpha: 0.8),
+      border: Border.all(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
     );
   }
 }

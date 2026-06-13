@@ -1,4 +1,6 @@
 import 'package:clicknow_version2/app/screens/professional/getx/stepper_controller.dart';
+import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -25,7 +27,9 @@ class HorizontalStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const disabledColor = Color(0xff888888);
+
+    /// -- Dark mode instance
+    final isDark = HelperFunctions.isDarkMode(context);
 
     return Align(
       alignment: Alignment.topCenter,
@@ -33,10 +37,8 @@ class HorizontalStepper extends StatelessWidget {
         builder: (context, constraints) {
           return Obx(() {
             final stepsCount = controller.steps.length;
-
-            final stepWidth = 52.0;
+            final stepWidth = ResponsiveUtility.width(52.0);
             final remainingWidth = constraints.maxWidth - (stepsCount * stepWidth);
-
             final connectorWidth = stepsCount > 1 ? (remainingWidth / (stepsCount - 1)).clamp(8.0, 60.0) : 0.0;
 
             return Row(
@@ -44,7 +46,6 @@ class HorizontalStepper extends StatelessWidget {
               children: List.generate(stepsCount, (index) {
                 final isActive = index == controller.currentStep.value;
                 final isCompleted = index < controller.currentStep.value;
-
                 final isEnabled = isActive || isCompleted;
 
                 return Row(
@@ -54,21 +55,23 @@ class HorizontalStepper extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+
                           // ICON CIRCLE
                           Container(
-                            height: 34,
-                            width: 34,
+                            height: ResponsiveUtility.height(34),
+                            width: ResponsiveUtility.width(34),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: isEnabled ? Colors.purple : Colors.transparent,
-                              border: isEnabled ? null : Border.all(width: 1, color: disabledColor,),
+                              color: isEnabled ?
+                              Color(0xff9A00CF):
+                              isDark ? Color(0xff363636) : Color(0xffABABAB),
                             ),
-                            child: Icon(_getStepIcon(index), size: 18, color: isEnabled ? Colors.white : disabledColor,),
+                            child: Icon(_getStepIcon(index), size: 18, color: isEnabled ? Colors.white : isDark ? Color(0xff888888) : Colors.white,),
                           ),
-                          const SizedBox(height: 6),
-                          Text('Step ${index + 1}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isActive ? Colors.purple : Colors.grey.shade400,),),
-                          const SizedBox(height: 2),
-                          Text(controller.steps[index], textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 8, color: isActive ? Colors.white : Colors.grey.shade400,),),
+                          SizedBox(height: ResponsiveUtility.height(6)),
+                          Text('Step ${index + 1}', textAlign: TextAlign.center, style: TextStyle(fontSize: ResponsiveUtility.fontSize(10), color: isEnabled ? Color(0xff9A00CF) : Colors.grey.shade400,),),
+                          SizedBox(height: ResponsiveUtility.height(2)),
+                          Text(controller.steps[index], textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: ResponsiveUtility.fontSize(8), color: isEnabled ? isDark ? Colors.white : Colors.black : Colors.grey.shade400,),),
                         ],
                       ),
                     ),
@@ -77,11 +80,11 @@ class HorizontalStepper extends StatelessWidget {
                     if (index != stepsCount - 1)
                       Container(
                         width: connectorWidth,
-                        height: 2.5,
-                        margin: const EdgeInsets.only(bottom: 34),
+                        height: ResponsiveUtility.height(2.0),
+                        margin: EdgeInsets.only(bottom: ResponsiveUtility.height(32)),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          color: isCompleted ? Colors.purple : Colors.grey.shade700,
+                          color: isCompleted ? Color(0xff9A00CF) : isDark ? Colors.grey.shade700 : Color(0xffDDDDDD),
                         ),
                       ),
                   ],

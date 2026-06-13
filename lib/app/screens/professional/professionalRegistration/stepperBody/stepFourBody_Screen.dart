@@ -1,9 +1,10 @@
 import 'package:clicknow_version2/app/screens/professional/getx/professionalRegistrationController.dart';
+import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
 import '../../../../utils/device_constants/appColors.dart' show AppColors;
 import '../../getx/stepper_controller.dart' show StepperController;
 
@@ -11,28 +12,30 @@ class StepFourBodyScreen extends StatefulWidget {
   const StepFourBodyScreen({super.key});
 
   @override
-  State<StepFourBodyScreen> createState() =>
-      _StepFourBodyScreenState();
+  State<StepFourBodyScreen> createState() => _StepFourBodyScreenState();
 }
 
 class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
   final _formKey = GlobalKey<FormState>();
   final controller = Get.find<ProfessionalRegistrationController>();
   final stepperController = Get.find<StepperController>();
+  bool get _isDark => HelperFunctions.isDarkMode(context);
+  Color get _textPrimary => _isDark ? Colors.white : Colors.black;
+  Color get _textSecondary => _isDark ? Colors.white60 : Colors.black.withValues(alpha: 0.6);
 
   @override
   Widget build(BuildContext context) {
+
+    /// -- Dark mode instance
+    final isDark = HelperFunctions.isDarkMode(context);
+
+    /// -- Scaling utility instance
     final scale = ScalingUtility(context: context);
     scale.setCurrentDeviceSize();
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+      padding: ResponsiveUtility.only(left: 16, top: 16, right: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16,),
       child: Form(
         key: _formKey,
         child: Column(
@@ -45,21 +48,21 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                 children: [
 
                   /// Step 4 :  Legal & Identity Verification Title and Description
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(10, 10, 10, 4),
-                    child: Text("Legal & Identity Verification",
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),),
+                  Padding(
+                    padding: ResponsiveUtility.only(bottom: 4, right: 10, top: 10, left: 10),
+                    child: Text(
+                      "Legal & Identity Verification",
+                      style: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(16), fontWeight: FontWeight.bold),),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text("Your profile will go live after admin approval.", style: TextStyle(color: Colors.white60, fontSize: 12),
+                  Padding(
+                    padding: ResponsiveUtility.symmetric(horizontal: 10),
+                    child: Text("Your profile will go live after admin approval.", style: TextStyle(color: _textSecondary, fontSize: ResponsiveUtility.fontSize(12)),
                     ),
                   ),
-                  const Divider(color: Color(0xff1E2939)),
+                  Divider(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
 
                   Padding(
-                    padding:
-                    const EdgeInsets.all(10),
+                    padding: ResponsiveUtility.all(10),
                     child: Column(
                       children: [
                         /// -- Secured & Confidential
@@ -67,11 +70,11 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            color: const Color(0xff1C1736).withValues(alpha: 0.5),
-                            border: Border.all(color: const Color(0xff1E2939)),
+                            color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.5) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
+                            border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: ResponsiveUtility.all(8),
                             child: Column(
                               children: [
                                 /// -- Icon and Title
@@ -79,18 +82,18 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                                   children: [
                                     // -- Icon
                                     Icon(Icons.shield_outlined, color: Color(0xff9235B1), size: 22,),
-                                    SizedBox(width: scale.getScaledWidth(8),),
+                                    SizedBox(width: ResponsiveUtility.width(8)),
                                     // -- Title
-                                    Text("Secured & Confidential", style: TextStyle(color: Colors.white, fontSize: scale.getScaledFont(14), fontWeight: FontWeight.bold),),
+                                    Text("Secured & Confidential", style: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(14), fontWeight: FontWeight.bold),),
                                   ],
                                 ),
 
                                 /// -- Description
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 28.0, right: 8.0, top: 6.0),
+                                  padding: ResponsiveUtility.only(left: 28, top: 2, right: 8, bottom: 6),
                                   child: Text(
                                     "Your documents are encrypted and stored securely. They are only used for verification purposes and will not be shared with third parties.",
-                                    style: TextStyle(color: Color(0xff5B6274), fontSize: scale.getScaledFont(12), fontWeight: FontWeight.w500),),
+                                    style: TextStyle(color: Color(0xff5B6274), fontSize: ResponsiveUtility.fontSize(12), fontWeight: FontWeight.w500),),
                                 ),
                               ],
                             ),
@@ -98,14 +101,14 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                         ),
 
                         /// -- Aadhaar Verification Section
-                        SizedBox(height: scale.getScaledHeight(8)),
+                        SizedBox(height: ResponsiveUtility.height(8)),
                         _buildExpandable(
                           title: "Aadhaar Verification",
                           isExpanded: controller.isAadharExpanded,
                           onTap: controller.toggleAadhar,
                           child: _aadhaarSection(),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// -- PAN Card Section
                         _buildExpandable(
@@ -121,11 +124,11 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            color: const Color(0xff1C1736).withValues(alpha: 0.5),
-                            border: Border.all(color: const Color(0xff1E2939)),
+                            color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.5) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
+                            border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: ResponsiveUtility.all(8),
                             child: Column(
                               children: [
                                 /// -- Icon and Title
@@ -133,18 +136,18 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                                   children: [
                                     // -- Icon
                                     Icon(Icons.info_outline_rounded, color: Color(0xffFFAE4C), size: 22,),
-                                    SizedBox(width: scale.getScaledWidth(8),),
+                                    SizedBox(width: ResponsiveUtility.width(8),),
                                     // -- Title
-                                    Text("Verification Required", style: TextStyle(color: Colors.white, fontSize: scale.getScaledFont(14), fontWeight: FontWeight.bold),),
+                                    Text("Verification Required", style: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(14), fontWeight: FontWeight.bold),),
                                   ],
                                 ),
 
                                 /// -- Description
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 28.0, right: 8.0, top: 6.0),
+                                  padding: ResponsiveUtility.only(left: 28, top: 2, right: 8, bottom: 6),
                                   child: Text(
                                     "Your profile will be reviewed by our admin team. You'll be notified once verification is completed (usually within 24-48 hours).",
-                                    style: TextStyle(color: Color(0xff5B6274), fontSize: scale.getScaledFont(12), fontWeight: FontWeight.w500),),
+                                    style: TextStyle(color: Color(0xff5B6274), fontSize: ResponsiveUtility.fontSize(12), fontWeight: FontWeight.w500),),
                                 ),
                               ],
                             ),
@@ -155,7 +158,7 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                   ),
 
                   /// -- back and Continue Buttons
-                  const Divider(color: Color(0xff1E2939), height: 2,),
+                  Divider(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9), height: 2,),
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -163,7 +166,7 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                           bottomLeft: Radius.circular(10),
                           bottomRight: Radius.circular(10)
                       ),
-                      color: const Color(0xff101425),
+                      color: _isDark ? const Color(0xff101425) : const Color(0xffF6F6F6),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
@@ -177,18 +180,19 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                               child: ElevatedButton(
                                 onPressed: ()=> stepperController.previousStep(),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xff13182C),
+                                  backgroundColor: isDark ? const Color(0xff13182C) : Colors.white,
+                                  elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadiusGeometry.circular(10),
-                                    side: BorderSide(color: Color(0xff1E2939)),
+                                    side: BorderSide(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.arrow_back, color: Colors.white, size: 22,),
+                                    Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black54, size: 22,),
                                     SizedBox(width: scale.getScaledWidth(8),),
-                                    Text("Back", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: scale.getScaledFont(14)),),
+                                    Text("Back", style: TextStyle(color: isDark ? Colors.white : Colors.black54, fontWeight: FontWeight.bold, fontSize: scale.getScaledFont(14)),),
                                   ],
                                 ),
                               ),
@@ -201,16 +205,17 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
                             child: SizedBox(
                               height: scale.getScaledHeight(40),
                               child: ElevatedButton(
-                                onPressed: () {
+                                onPressed: () async {
                                   if (controller.validateStep4()) {
-                                    stepperController.nextStep();
+                                    await controller.saveDraftForStep(3);
+                                    await stepperController.completeStepAndContinue(3);
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
+                                  backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(10)),
                                 ),
-                                child: Text("Continue", style: TextStyle(color: AppColors.purple3, fontWeight: FontWeight.bold, fontSize: scale.getScaledFont(14)),),
+                                child: Text("Continue", style: TextStyle(color: isDark ? AppColors.purple3 : Colors.white, fontWeight: FontWeight.bold, fontSize: scale.getScaledFont(14)),),
                               ),
                             ),
                           ),
@@ -246,15 +251,13 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
               Icons.verified_user,
               color: Color(0xff9235B1),
             ),
-            title: Text(title,
-                style: const TextStyle(
-                    color: Colors.white)),
+            title: Text(title, style: TextStyle(color: _textPrimary)),
             trailing: Icon(
               isExpanded.value
                   ? Icons.keyboard_arrow_up
                   : Icons
                   .keyboard_arrow_down,
-              color: Colors.white,
+              color: _textPrimary,
             ),
           ),
           if (isExpanded.value)
@@ -276,8 +279,8 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
       children: [
 
         /// -- Aadhaar number
-        const Text("Aadhaar Number", style: TextStyle(color: Colors.white)),
-        const SizedBox(height: 6),
+        Text("Aadhaar Number", style: TextStyle(color: _textPrimary)),
+        SizedBox(height: ResponsiveUtility.height(6)),
         TextFormField(
           controller: controller.aadharController,
           keyboardType: TextInputType.number,
@@ -285,40 +288,34 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(12),
           ],
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _textPrimary),
           decoration: _inputDecoration("0000 0000 0000"),
         ),
 
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtility.height(10)),
 
-        const Text("Upload Aadhaar Card", style: TextStyle(color: Colors.white)),
-        const SizedBox(height: 6),
+        Text("Upload Aadhaar Card", style: TextStyle(color: _textPrimary)),
+        SizedBox(height: ResponsiveUtility.height(6)),
         Obx(() => GestureDetector(
           onTap: controller.pickAadharFile,
           child: Container(
-            height: 120,
+            height: ResponsiveUtility.height(120),
             decoration: _uploadDecoration(),
             child: Center(
               child: controller.aadharFileName.value.isEmpty
-                ? const Column(
+                ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.upload_file, color: Colors.white54),
-                  SizedBox(height: 8),
-                  Text("Tap to upload", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
-                  SizedBox(height: 4),
-                  Text("Front & back Side of Aadhaar Card\nin single PDF File", textAlign: TextAlign.center, style: TextStyle(color: Colors.white54),),
+                  Icon(Icons.upload_file, color: _isDark ? Colors.white54 : Colors.black54),
+                  SizedBox(height: ResponsiveUtility.height(6)),
+                  Text("Tap to upload", style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),),
+                  SizedBox(height: ResponsiveUtility.height(4)),
+                  Text("Front & back Side of Aadhaar Card\nin single PDF File", textAlign: TextAlign.center, style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54),),
+                  SizedBox(height: ResponsiveUtility.height(4)),
+                  Text("PDF only, max 5 MB", textAlign: TextAlign.center, style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54, fontSize: ResponsiveUtility.fontSize(11))),
                 ],
               )
-                  : Text(
-                controller
-                    .aadharFileName
-                    .value,
-                style:
-                const TextStyle(
-                    color: Colors
-                        .purpleAccent),
-              ),
+                  : Text(controller.aadharFileName.value, style: const TextStyle(color: Colors.purpleAccent),),
             ),
           ),
         )),
@@ -333,7 +330,7 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
       CrossAxisAlignment.start,
       children: [
 
-        const Text("PAN Number", style: TextStyle(color: Colors.white)),
+        Text("PAN Number", style: TextStyle(color: _textPrimary)),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller.panController,
@@ -345,13 +342,13 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
             _UpperCaseTextFormatter(),
           ],
           style:
-          const TextStyle(color: Colors.white),
+          TextStyle(color: _textPrimary),
           decoration: _inputDecoration("ABCD1234F"),
         ),
 
         const SizedBox(height: 16),
 
-        const Text("Upload PAN Card", style: TextStyle(color: Colors.white)),
+        Text("Upload PAN Card", style: TextStyle(color: _textPrimary)),
         const SizedBox(height: 6),
 
         Obx(() => GestureDetector(
@@ -363,26 +360,21 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
             child: Center(
               child: controller
                   .panFileName.value.isEmpty
-                  ? const Column(
+                  ? Column(
                 mainAxisAlignment:
                 MainAxisAlignment
                     .center,
                 children: [
-                  Icon(Icons.upload_file, color: Colors.white54),
+                  Icon(Icons.upload_file, color: _isDark ? Colors.white54 : Colors.black54),
                   SizedBox(height: 8),
-                  Text("Tap to upload", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
+                  Text("Tap to upload", style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),),
                   SizedBox(height: 4),
-                  Text("Front & back Side of PAN Card\nin single PDF File", textAlign: TextAlign.center, style: TextStyle(color: Colors.white54),),
+                  Text("Front & back Side of PAN Card\nin single PDF File", textAlign: TextAlign.center, style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54),),
+                  SizedBox(height: ResponsiveUtility.height(4)),
+                  Text("PDF only, max 5 MB", textAlign: TextAlign.center, style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54, fontSize: ResponsiveUtility.fontSize(11))),
                 ],
               )
-                  : Text(
-                controller
-                    .panFileName.value,
-                style:
-                const TextStyle(
-                    color: Colors
-                        .purpleAccent),
-              ),
+                  : Text(controller.panFileName.value, style: const TextStyle(color: Colors.purpleAccent),),
             ),
           ),
         )),
@@ -396,15 +388,12 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
       String hint) {
     return InputDecoration(
       filled: true,
-      fillColor:
-      const Color(0xff1C1736).withValues(alpha: 0.8),
+      fillColor: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.8) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
       hintText: hint,
-      hintStyle:
-      const TextStyle(color: Color(0xff5B6274)),
-      border: OutlineInputBorder(
-        borderRadius:
-        BorderRadius.circular(10),
-      ),
+      hintStyle: TextStyle(color: _isDark ? const Color(0xff5B6274) : Colors.black54),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? AppColors.primaryColor : Color(0xffD9D9D9))),
     );
   }
 
@@ -413,9 +402,8 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
       borderRadius:
       BorderRadius.circular(10),
       color:
-      const Color(0xff1C1736).withValues(alpha: 0.5),
-      border: Border.all(
-          color: const Color(0xff1E2939)),
+      _isDark ? const Color(0xff1C1736).withValues(alpha: 0.5) : const Color(0xffFCFBFF),
+      border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
     );
   }
 
@@ -424,18 +412,16 @@ class _StepFourBodyScreenState extends State<StepFourBodyScreen> {
       borderRadius:
       BorderRadius.circular(10),
       color:
-      const Color(0xff1C1736).withValues(alpha: 0.8),
-      border: Border.all(
-          color: const Color(0xff1E2939)),
+      _isDark ? const Color(0xff1C1736).withValues(alpha: 0.8) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
+      border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
     );
   }
 
   BoxDecoration _uploadDecoration() {
     return BoxDecoration(
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: const Color(0xff1E2939), style: BorderStyle.solid),
-      color:
-      const Color(0xff1C1736).withValues(alpha: 0.6),
+      border: Border.all(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), style: BorderStyle.solid),
+      color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.6) : Colors.white,
     );
   }
 }

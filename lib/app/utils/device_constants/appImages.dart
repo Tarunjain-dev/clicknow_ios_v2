@@ -7,19 +7,22 @@ class AppImages{
   static const String onboarding3 = "assets/images/onboarding/onboarding3.png";
   static const String onboarding4 = "assets/images/onboarding/onboarding4.png";
 
+  /// -- Banners
+  static const String banner1 = "assets/images/banner/photo_banner.png";
+  static const String banner2 = "assets/images/banner/music_banner.png";
+  static const String banner3 = "assets/images/banner/dj_banner.png";
+
   /// -- Auth Images
   static const String authImage = "assets/images/auth/authImage.png";
-  static const String otpImage = "assets/images/auth/otpImage.png";
 
   /// -- Icons
-  static const String googleIcon = "assets/icons/google.png";
   static const String bellIcon = "assets/icons/bell.png";
-  static const String giftIcon = "assets/icons/gift.png";
-
+  static const String cart = "assets/icons/cart.png";
+  static const String fire = "assets/icons/fire.png";
+  static const String camera = "assets/icons/camera.png";
 
   /// -- Avatars
   static const String avtar2 = "assets/avtars/avatars2.png";
-
 
   /// -- Welcome Image
   static const String welcomeImage = "assets/images/welcome/welcomeImage.png";

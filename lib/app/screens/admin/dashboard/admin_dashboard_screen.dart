@@ -1,6 +1,9 @@
+import 'package:clicknow_version2/app/routes/appRoutes.dart';
+import 'package:clicknow_version2/app/screens/admin/dashboard/getx/admin_dashboard_controller.dart';
 import 'package:clicknow_version2/app/screens/admin/widgets/admin_drawer.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -8,459 +11,475 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scale = ScalingUtility(context: context);
-    scale.setCurrentDeviceSize();
+    final scale = ScalingUtility(context: context)..setCurrentDeviceSize();
+    final controller = Get.isRegistered<AdminDashboardController>()
+        ? Get.find<AdminDashboardController>()
+        : Get.put(AdminDashboardController());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark
+        ? const Color(0xff0C0714)
+        : const Color(0xffF5F6FA);
 
+    return Scaffold(
+      backgroundColor: background,
+      drawer: AdminDrawer(
+        scale: scale,
+        activeRoute: AppRoutes.adminDashboardRoute,
+      ),
+      body: SafeArea(
+        child: Obx(() {
+          final data = controller.dashboard.value;
+          return RefreshIndicator(
+            onRefresh: controller.refresh,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _header(context, scale, controller)),
+                SliverPadding(
+                  padding: EdgeInsets.all(scale.getScaledWidth(14)),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      if (controller.errorMessage.value.isNotEmpty)
+                        _errorBanner(
+                          context,
+                          controller.errorMessage.value,
+                          scale,
+                        ),
+                      if (controller.isLoading.value)
+                        const LinearProgressIndicator(minHeight: 2),
+                      SizedBox(height: scale.getScaledHeight(12)),
+                      _sectionHeading(
+                        context,
+                        'Business overview',
+                        'Live operational and financial totals',
+                        scale,
+                      ),
+                      SizedBox(height: scale.getScaledHeight(10)),
+                      _metricGrid(context, scale, [
+                        _Metric(
+                          'Professionals',
+                          '${data.totalProfessionals}',
+                          Icons.groups_2_outlined,
+                          const Color(0xff6B4EFF),
+                        ),
+                        _Metric(
+                          'Pending approvals',
+                          '${data.pendingApprovals}',
+                          Icons.fact_check_outlined,
+                          const Color(0xffF59E0B),
+                        ),
+                        _Metric(
+                          'Customers',
+                          '${data.totalCustomers}',
+                          Icons.people_alt_outlined,
+                          const Color(0xff0EA5E9),
+                        ),
+                        _Metric(
+                          'Active bookings',
+                          '${data.activeBookings}',
+                          Icons.calendar_month_rounded,
+                          const Color(0xff10B981),
+                        ),
+                        _Metric(
+                          'Total revenue',
+                          _money(data.totalRevenue),
+                          Icons.payments_outlined,
+                          const Color(0xff7C3AED),
+                        ),
+                        _Metric(
+                          'Pending payout',
+                          _money(data.pendingPayout),
+                          Icons.account_balance_wallet_outlined,
+                          const Color(0xffEF4444),
+                        ),
+                      ]),
+                      SizedBox(height: scale.getScaledHeight(18)),
+                      _sectionHeading(
+                        context,
+                        'Booking health',
+                        'Current distribution across the booking lifecycle',
+                        scale,
+                      ),
+                      SizedBox(height: scale.getScaledHeight(10)),
+                      _metricGrid(context, scale, [
+                        _Metric(
+                          'Completed',
+                          '${data.completedBookings}',
+                          Icons.task_alt_rounded,
+                          const Color(0xff10B981),
+                        ),
+                        _Metric(
+                          'In progress',
+                          '${data.inProgressBookings}',
+                          Icons.timelapse_rounded,
+                          const Color(0xffF59E0B),
+                        ),
+                        _Metric(
+                          'Confirmed',
+                          '${data.confirmedBookings}',
+                          Icons.verified_outlined,
+                          const Color(0xff3B82F6),
+                        ),
+                        _Metric(
+                          'Rejected',
+                          '${data.rejectedBookings}',
+                          Icons.block_outlined,
+                          const Color(0xffEF4444),
+                        ),
+                        _Metric(
+                          'Open support',
+                          '${data.openSupportTickets}',
+                          Icons.support_agent_rounded,
+                          const Color(0xffEC4899),
+                        ),
+                      ]),
+                      SizedBox(height: scale.getScaledHeight(18)),
+                      _chartCard(context, scale, data.monthlyOverview),
+                      SizedBox(height: scale.getScaledHeight(24)),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _header(
+    BuildContext context,
+    ScalingUtility scale,
+    AdminDashboardController controller,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(
+        scale.getScaledWidth(8),
+        scale.getScaledHeight(10),
+        scale.getScaledWidth(14),
+        scale.getScaledHeight(14),
+      ),
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xff0A0713),
-            Color(0xff1A0D2C),
-            Color(0xff12091F),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [Color(0xff16052C), Color(0xff231044)]
+              : const [Color(0xff3A075F), Color(0xff6F18A8)],
         ),
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        drawer: AdminDrawer(scale: scale),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: scale.getScaledWidth(16),
-              vertical: scale.getScaledHeight(16),
+      child: Row(
+        children: [
+          Builder(
+            builder: (context) => IconButton(
+              onPressed: () => Scaffold.of(context).openDrawer(),
+              icon: const Icon(Icons.menu_rounded, color: Colors.white),
             ),
+          ),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(context, scale),
-                SizedBox(height: scale.getScaledHeight(16)),
-                _buildStatsGrid(scale),
-                SizedBox(height: scale.getScaledHeight(18)),
-                _buildSectionTitle("Booking Status Distribution", scale),
-                SizedBox(height: scale.getScaledHeight(10)),
-                _buildBookingStatusGrid(scale),
-                SizedBox(height: scale.getScaledHeight(18)),
-                _buildSectionTitle("Monthly Overview", scale),
-                SizedBox(height: scale.getScaledHeight(10)),
-                _buildChartCard(scale),
+                Text(
+                  'Admin dashboard',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: scale.getScaledFont(20),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'ClickNow operations at a glance',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: scale.getScaledFont(11),
+                  ),
+                ),
               ],
             ),
           ),
-        ),
+          IconButton(
+            tooltip: 'Refresh dashboard',
+            onPressed: controller.isRefreshing.value
+                ? null
+                : controller.refresh,
+            icon: controller.isRefreshing.value
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.refresh_rounded, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, ScalingUtility scale) {
-    return Row(
+  Widget _sectionHeading(
+    BuildContext context,
+    String title,
+    String subtitle,
+    ScalingUtility scale,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Builder(
-          builder: (context) => GestureDetector(
-            onTap: () => Scaffold.of(context).openDrawer(),
-            child: Container(
-              height: scale.getScaledHeight(36),
-              width: scale.getScaledWidth(36),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              child: Icon(
-                Icons.menu,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: scale.getScaledWidth(18),
-              ),
-            ),
+        Text(
+          title,
+          style: TextStyle(
+            color: scheme.onSurface,
+            fontSize: scale.getScaledFont(16),
+            fontWeight: FontWeight.w800,
           ),
         ),
-        SizedBox(width: scale.getScaledWidth(12)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "ClickNow Admin’s Dashboard",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: scale.getScaledFont(16),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: scale.getScaledHeight(2)),
-              Text(
-                "Overview of your booking performance",
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: scale.getScaledFont(11),
-                ),
-              ),
-            ],
-          ),
-        ),
-        _buildNotificationBadge(scale),
-      ],
-    );
-  }
-
-  Widget _buildNotificationBadge(ScalingUtility scale) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: scale.getScaledHeight(36),
-          width: scale.getScaledWidth(36),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          child: Icon(
-            Icons.notifications_none,
-            color: Colors.white,
-            size: scale.getScaledWidth(18),
-          ),
-        ),
-        Positioned(
-          right: -2,
-          top: -2,
-          child: Container(
-            height: scale.getScaledHeight(16),
-            width: scale.getScaledWidth(16),
-            decoration: BoxDecoration(
-              color: const Color(0xff6C3DFF),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.2),
-            ),
-            child: Center(
-              child: Text(
-                "6",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: scale.getScaledFont(8),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: scheme.onSurfaceVariant,
+            fontSize: scale.getScaledFont(11),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatsGrid(ScalingUtility scale) {
-    final cards = [
-      _StatCardData(
-        title: "Total Professionals",
-        value: "127",
-        delta: "+12%",
-        icon: Icons.badge,
-        iconColor: const Color(0xff9F62FF),
-      ),
-      _StatCardData(
-        title: "Pending Approvals",
-        value: "8",
-        delta: "+12%",
-        icon: Icons.pending_actions,
-        iconColor: const Color(0xffFF9E2C),
-      ),
-      _StatCardData(
-        title: "Total Customer",
-        value: "127",
-        delta: "+12%",
-        icon: Icons.groups,
-        iconColor: const Color(0xff5FD6FF),
-      ),
-      _StatCardData(
-        title: "Active Bookings",
-        value: "8",
-        delta: "+12%",
-        icon: Icons.event_available,
-        iconColor: const Color(0xff3DFFB2),
-      ),
-      _StatCardData(
-        title: "Monthly Revenue",
-        value: "127",
-        delta: "+12%",
-        icon: Icons.attach_money,
-        iconColor: const Color(0xff7C7CFF),
-      ),
-      _StatCardData(
-        title: "Pending Payout",
-        value: "8",
-        delta: "+12%",
-        icon: Icons.account_balance_wallet,
-        iconColor: const Color(0xffFF4D4D),
-      ),
-    ];
-
+  Widget _metricGrid(
+    BuildContext context,
+    ScalingUtility scale,
+    List<_Metric> metrics,
+  ) {
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = width >= 1100
+        ? 4
+        : width >= 700
+        ? 3
+        : 2;
     return GridView.builder(
-      itemCount: cards.length,
+      itemCount: metrics.length,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: scale.getScaledHeight(12),
-        crossAxisSpacing: scale.getScaledWidth(12),
-        childAspectRatio: 1.28,
+        crossAxisCount: columns,
+        mainAxisSpacing: scale.getScaledHeight(10),
+        crossAxisSpacing: scale.getScaledWidth(10),
+        childAspectRatio: width < 420 ? 1.42 : 1.65,
       ),
-      itemBuilder: (context, index) => _StatCard(
-        data: cards[index],
-        scale: scale,
-      ),
+      itemBuilder: (_, index) => _metricCard(context, scale, metrics[index]),
     );
   }
 
-  Widget _buildSectionTitle(String title, ScalingUtility scale) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-        fontSize: scale.getScaledFont(13),
-      ),
-    );
-  }
-
-  Widget _buildBookingStatusGrid(ScalingUtility scale) {
-    final items = [
-      _StatCardData(
-        title: "Completed Booking",
-        value: "127",
-        delta: "+12%",
-        icon: Icons.check_circle_outline,
-        iconColor: const Color(0xff8E5CFF),
-      ),
-      _StatCardData(
-        title: "In-Progress Booking",
-        value: "8",
-        delta: "+12%",
-        icon: Icons.work_history_outlined,
-        iconColor: const Color(0xffFF9E2C),
-      ),
-      _StatCardData(
-        title: "Canceled Booking",
-        value: "127",
-        delta: "+12%",
-        icon: Icons.cancel_outlined,
-        iconColor: const Color(0xffFF4D4D),
-      ),
-      _StatCardData(
-        title: "Confirmed Booking",
-        value: "8",
-        delta: "+12%",
-        icon: Icons.event_available_outlined,
-        iconColor: const Color(0xff3DFFB2),
-      ),
-    ];
-
-    return GridView.builder(
-      itemCount: items.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: scale.getScaledHeight(12),
-        crossAxisSpacing: scale.getScaledWidth(12),
-        childAspectRatio: 1.4,
-      ),
-      itemBuilder: (context, index) => _StatCard(
-        data: items[index],
-        scale: scale,
-        compact: true,
-      ),
-    );
-  }
-
-  Widget _buildChartCard(ScalingUtility scale) {
-    final data = [
-      _MonthlyData('Jan', 58, 40),
-      _MonthlyData('Feb', 70, 55),
-      _MonthlyData('Mar', 78, 20),
-      _MonthlyData('Apr', 82, 18),
-      _MonthlyData('May', 74, 62),
-      _MonthlyData('Jun', 40, 22),
-    ];
-
+  Widget _metricCard(
+    BuildContext context,
+    ScalingUtility scale,
+    _Metric metric,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: EdgeInsets.all(scale.getScaledWidth(12)),
       decoration: BoxDecoration(
-        color: const Color(0xff161025),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: SfCartesianChart(
-        plotAreaBorderWidth: 0,
-        legend: Legend(
-          isVisible: true,
-          position: LegendPosition.bottom,
-          textStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: scale.getScaledFont(10),
-          ),
+        color: isDark ? const Color(0xff181128) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xff332746) : const Color(0xffE5E7EB),
         ),
-        primaryXAxis: CategoryAxis(
-          axisLine: const AxisLine(width: 0),
-          majorGridLines: const MajorGridLines(width: 0),
-          labelStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: scale.getScaledFont(9),
-          ),
-        ),
-        primaryYAxis: NumericAxis(
-          axisLine: const AxisLine(width: 0),
-          majorGridLines: MajorGridLines(
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
-          labelStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: scale.getScaledFont(9),
-          ),
-        ),
-        series: <CartesianSeries<_MonthlyData, String>>[
-          ColumnSeries<_MonthlyData, String>(
-            name: 'Revenue',
-            dataSource: data,
-            xValueMapper: (item, _) => item.month,
-            yValueMapper: (item, _) => item.revenue,
-            color: const Color(0xff8E5CFF),
-            width: 0.5,
-          ),
-          ColumnSeries<_MonthlyData, String>(
-            name: 'Payout',
-            dataSource: data,
-            xValueMapper: (item, _) => item.month,
-            yValueMapper: (item, _) => item.payout,
-            color: const Color(0xff6CFFB2),
-            width: 0.5,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.data,
-    required this.scale,
-    this.compact = false,
-  });
-
-  final _StatCardData data;
-  final ScalingUtility scale;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(scale.getScaledWidth(compact ? 10 : 12)),
-      decoration: BoxDecoration(
-        color: const Color(0xff151022),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0D111827),
+                  blurRadius: 16,
+                  offset: Offset(0, 6),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: scale.getScaledHeight(26),
-            width: scale.getScaledWidth(26),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: data.iconColor.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(8),
+              color: metric.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              data.icon,
-              color: data.iconColor,
-              size: scale.getScaledWidth(14),
+            child: Icon(metric.icon, color: metric.color, size: 19),
+          ),
+          const Spacer(),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              metric.value,
+              style: TextStyle(
+                color: scheme.onSurface,
+                fontSize: scale.getScaledFont(20),
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-          SizedBox(height: scale.getScaledHeight(8)),
+          SizedBox(height: scale.getScaledHeight(3)),
           Text(
-            data.title,
+            metric.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: scale.getScaledFont(compact ? 10 : 11),
+              color: scheme.onSurfaceVariant,
+              fontSize: scale.getScaledFont(11),
+              fontWeight: FontWeight.w600,
             ),
-          ),
-          SizedBox(height: scale.getScaledHeight(4)),
-          Row(
-            children: [
-              Text(
-                data.value,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: scale.getScaledFont(compact ? 16 : 18),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-          SizedBox(height: scale.getScaledHeight(4)),
-          Row(
-            children: [
-              Icon(
-                Icons.trending_up,
-                color: const Color(0xff31FF89),
-                size: scale.getScaledWidth(12),
-              ),
-              SizedBox(width: scale.getScaledWidth(4)),
-              Text(
-                "${data.delta} vs last month",
-                style: TextStyle(
-                  color: const Color(0xff31FF89),
-                  fontSize: scale.getScaledFont(9),
-                ),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
+
+  Widget _chartCard(
+    BuildContext context,
+    ScalingUtility scale,
+    List<AdminMonthlyOverview> data,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue = data.fold<double>(
+      0,
+      (current, item) =>
+          [current, item.revenue, item.payout].reduce((a, b) => a > b ? a : b),
+    );
+    return Container(
+      padding: EdgeInsets.all(scale.getScaledWidth(14)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff181128) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? const Color(0xff332746) : const Color(0xffE5E7EB),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeading(
+            context,
+            'Six-month financial overview',
+            'Successful payments compared with professional payouts',
+            scale,
+          ),
+          SizedBox(height: scale.getScaledHeight(12)),
+          SizedBox(
+            height: scale.getScaledHeight(260),
+            child: maxValue == 0
+                ? Center(
+                    child: Text(
+                      'Financial activity will appear here.',
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  )
+                : SfCartesianChart(
+                    margin: EdgeInsets.zero,
+                    plotAreaBorderWidth: 0,
+                    tooltipBehavior: TooltipBehavior(enable: true),
+                    legend: Legend(
+                      isVisible: true,
+                      position: LegendPosition.bottom,
+                      textStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                    primaryXAxis: CategoryAxis(
+                      majorGridLines: const MajorGridLines(width: 0),
+                      axisLine: AxisLine(color: scheme.outlineVariant),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                    primaryYAxis: NumericAxis(
+                      axisLine: const AxisLine(width: 0),
+                      majorTickLines: const MajorTickLines(size: 0),
+                      numberFormat: null,
+                      labelFormat: '₹{value}',
+                      majorGridLines: MajorGridLines(
+                        color: scheme.outlineVariant.withValues(alpha: 0.55),
+                        dashArray: const [4, 4],
+                      ),
+                      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                    series: <CartesianSeries<AdminMonthlyOverview, String>>[
+                      ColumnSeries<AdminMonthlyOverview, String>(
+                        name: 'Revenue',
+                        dataSource: data,
+                        xValueMapper: (item, _) => item.label,
+                        yValueMapper: (item, _) => item.revenue,
+                        color: const Color(0xff6B4EFF),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(5),
+                        ),
+                      ),
+                      ColumnSeries<AdminMonthlyOverview, String>(
+                        name: 'Payout',
+                        dataSource: data,
+                        xValueMapper: (item, _) => item.label,
+                        yValueMapper: (item, _) => item.payout,
+                        color: const Color(0xff10B981),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(5),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorBanner(
+    BuildContext context,
+    String message,
+    ScalingUtility scale,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(bottom: scale.getScaledHeight(8)),
+      padding: EdgeInsets.all(scale.getScaledWidth(10)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _money(double value) {
+    final rounded = value.round();
+    final raw = rounded.toString();
+    final chars = raw.split('').reversed.toList();
+    final out = <String>[];
+    for (var i = 0; i < chars.length; i++) {
+      if (i != 0 && i % 3 == 0) out.add(',');
+      out.add(chars[i]);
+    }
+    return '₹${out.reversed.join()}';
+  }
 }
 
-class _StatCardData {
-  const _StatCardData({
-    required this.title,
-    required this.value,
-    required this.delta,
-    required this.icon,
-    required this.iconColor,
-  });
+class _Metric {
+  const _Metric(this.title, this.value, this.icon, this.color);
 
   final String title;
   final String value;
-  final String delta;
   final IconData icon;
-  final Color iconColor;
-}
-
-class _MonthlyData {
-  const _MonthlyData(this.month, this.revenue, this.payout);
-
-  final String month;
-  final double revenue;
-  final double payout;
+  final Color color;
 }

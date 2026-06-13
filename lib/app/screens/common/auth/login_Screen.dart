@@ -1,13 +1,14 @@
-import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appImages.dart';
-import 'package:clicknow_version2/app/utils/device_constants/appStrings.dart';
+import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -15,99 +16,80 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    /// -- Scaling Utility Instance
+    /// -- Auth Controller instance
+    final authController = AuthController.instance;
+
+    /// -- Dark mode instance
+    final isDark = HelperFunctions.isDarkMode(context);
+
     final scale = ScalingUtility(context: context);
     scale.setCurrentDeviceSize();
 
-    /// -- Auth Image height
-    final double imageHeight = scale.getScaledHeight(300);
+    /// -- Dark Mode instance
+    HelperFunctions.isDarkMode(context);
 
-    return Container(
-      color: AppColors.black,
-      child: Scaffold(
-        backgroundColor: AppColors.transparent,
-        resizeToAvoidBottomInset: true,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              /// -- Login Image and body Content
-              CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  /// -- Login photographer Image
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: imageHeight,
-                      width: double.infinity,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.asset(AppImages.photographer, fit: BoxFit.cover,),
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    AppColors.black.withValues(alpha: 0.6),
-                                    AppColors.black.withValues(alpha: 0.9),
-                                  ],
-                                  stops: const [0.4, 0.7, 1],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+    return SafeArea(
+      child: Container(
+        height: double.maxFinite,
+        width: double.maxFinite,
+        decoration: BoxDecoration(
+          gradient: isDark ? AppColors.primaryGradient : null,
+          color:  isDark ? null : Colors.white,
+        ),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          resizeToAvoidBottomInset: true,
 
-                  /// -- Login Body Content
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: scale.getScaledWidth(16),
-                        vertical: scale.getScaledHeight(10),
-                      ),
-                      child: _BodyContent(scale: scale),
-                    ),
-                  ),
-                ],
-              ),
+          body: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            physics: AlwaysScrollableScrollPhysics(),
+            padding: ResponsiveUtility.symmetric(vertical: 10, horizontal: 15),
+            child: Column(
+              children: [
 
-              /// -- Guest Login: Cross "X" button
-              Positioned(
-                top: scale.getScaledHeight(8),
-                right: scale.getScaledWidth(8),
-                child: Container(
-                  height: scale.getScaledHeight(36),
-                  width: scale.getScaledWidth(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.white.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Center(
-                    child: IconButton(
-                      onPressed: () => Get.offAllNamed(
-                        AppRoutes.customerBottomNavigationRoute,
+                /// --  Guest Login 'X' Button
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Obx(() {
+                    // -- when not to show the Guest Login 'X' button
+                    if (!authController.showGuestSection.value || authController.showOtp.value) return const SizedBox();
+                    return Container(
+                      height: ResponsiveUtility.height(36),
+                      width: ResponsiveUtility.width(36),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: isDark ? Color(0xff323232) : Colors.grey.shade300,),
+                        shape: BoxShape.circle,
+                        color: isDark ? Color(0xff2F2F2F).withValues(alpha: 0.8) : Colors.white,
                       ),
-                      icon: Icon(
-                        Icons.close,
-                        color: AppColors.white,
-                        size: scale.getScaledWidth(18),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: authController.continueAsGuest,
+                        icon: Icon(
+                          Icons.close,
+                          color: isDark ? Color(0xff7A7A7A) : Colors.grey,
+                          size: ResponsiveUtility.width(18),),
                       ),
-                      tooltip: "Continue as guest",
-                    ),
+                    );
+                  }),
+                ),
+                SizedBox(height: ResponsiveUtility.height(10),),
+
+                /// -- Auth Screen Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
+                  child: Image.asset(
+                    AppImages.authImage,
+                    fit: BoxFit.cover,
+                    height: ResponsiveUtility.height(240),
+                    width: double.infinity,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: ResponsiveUtility.height(22),),
+
+                /// -- body
+                _BodyContent(),
+              ],
+            ),
           ),
         ),
       ),
@@ -115,79 +97,99 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
+/// -- Auth Screen Body
 class _BodyContent extends StatefulWidget {
-  const _BodyContent({required this.scale});
-  final ScalingUtility scale;
+  const _BodyContent();
+
   @override
   State<_BodyContent> createState() => _BodyContentState();
 }
 
-class _BodyContentState extends State<_BodyContent> {
+class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
 
-  /// -- Auth Controller instance
-  final AuthController controller = AuthController.instance;
+  /// -- Auth Controller
+  final controller = AuthController.instance;
 
-  /// -- Tap Gestures
+  Worker? _otpVisibilityWorker;
   final TapGestureRecognizer _termsRecognizer = TapGestureRecognizer();
   final TapGestureRecognizer _privacyRecognizer = TapGestureRecognizer();
 
+  static final String termsAndConditionURL = "https://docs.google.com/document/d/16U8wl3KjIGmEY_P5AzUXkNO9G650j15AvsG9Q97arMk/edit?usp=drivesdk";
+  static final String privacyPolicyURL = "https://docs.google.com/document/d/1JaZfzC0gLrdzMoYRrsUezmE-SymflSUThUKh8d5u4vk/edit?usp=drivesdk";
+
+  @override
+  void initState() {
+    super.initState();
+    _otpVisibilityWorker = ever<bool>(controller.showOtp, (show) {
+          if (show) {
+            listenForCode();
+          } else {
+            cancel();
+          }
+        }
+    );
+
+    if (controller.showOtp.value) {
+      listenForCode();
+    }
+  }
+
   @override
   void dispose() {
+    _otpVisibilityWorker?.dispose();
+    cancel();
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
     super.dispose();
   }
 
-  BoxDecoration _fieldDecoration(ScalingUtility scale, {double radius = 12}) {
+  @override
+  void codeUpdated() {
+    final smsCode = code?.trim() ?? '';
+
+    if (smsCode.isEmpty) return;
+
+    controller.autofillOtpFromSms(smsCode);
+  }
+
+  BoxDecoration fieldDecoration({required final bool isDark}) {
     return BoxDecoration(
-      color: AppColors.white.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.black.withValues(alpha: 0.4),
-          blurRadius: 10,
-          offset: const Offset(0, 3),
-        ),
-      ],
+      color: isDark ? Color(0xff2F2F2F).withValues(alpha: 0.8) : Colors.white,
+      borderRadius: BorderRadius.circular(ResponsiveUtility.radius(12)),
+      border: Border.all(
+        color: isDark ? Color(0xff323232).withValues(alpha: 1.0) : Color(0xffD9D9D9),
+      ),
     );
   }
 
-  Widget _buildOtpBox(int index, ScalingUtility scale) {
+  Widget buildOtpBox(int index, {required bool isDark}) {
+
     return Container(
-      height: scale.getScaledHeight(46),
-      width: scale.getScaledWidth(44),
-      decoration: _fieldDecoration(scale, radius: 8),
+      height: ResponsiveUtility.height(50),
+      width: ResponsiveUtility.width(45),
       alignment: Alignment.center,
+      decoration: fieldDecoration(isDark: isDark),
       child: TextField(
         controller: controller.otpControllers[index],
         focusNode: controller.otpFocusNodes[index],
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.white.withValues(alpha: 0.85),
-          fontSize: scale.getScaledFont(16),
-          fontWeight: FontWeight.w600,
-        ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
+          LengthLimitingTextInputFormatter(1)
         ],
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           border: InputBorder.none,
-          counterText: "",
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
         ),
         onChanged: (value) {
-          if (value.isNotEmpty) {
-            if (index < controller.otpFocusNodes.length - 1) {
-              controller.otpFocusNodes[index + 1].requestFocus();
-            } else {
-              FocusScope.of(context).unfocus();
+          if(value.isNotEmpty){
+            if(index<5){
+              controller.otpFocusNodes[index+1].requestFocus();
             }
-          } else if (index > 0) {
-            controller.otpFocusNodes[index - 1].requestFocus();
+          }else{
+            if(index>0){
+              controller.otpFocusNodes[index-1].requestFocus();
+            }
           }
         },
       ),
@@ -196,344 +198,208 @@ class _BodyContentState extends State<_BodyContent> {
 
   @override
   Widget build(BuildContext context) {
-    final scale = widget.scale;
+
+    /// -- Dark mode instance
+    final isDark = HelperFunctions.isDarkMode(context);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        /// -- Login Screen Title and Description
-        Text(AppStrings.loginTitle, style: TextStyle(fontSize: scale.getScaledFont(20), color: AppColors.white, fontWeight: FontWeight.bold,),),
-        SizedBox(height: scale.getScaledHeight(6)),
-        Text(AppStrings.loginDescription, textAlign: TextAlign.center, style: TextStyle(fontSize: scale.getScaledFont(13), color: AppColors.descriptionColor,),),
-        SizedBox(height: scale.getScaledHeight(18)),
 
-        /// -- Phone input textfield
+        /// -- Auth Screen Title
+        Text(
+          "Get in to your account",
+          style: TextStyle(
+            fontSize: ResponsiveUtility.fontSize(28),
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.white : AppColors.black,
+          ),
+        ),
+        SizedBox(height: ResponsiveUtility.height(8)),
+
+        /// -- Auth Screen Sub-Title
+        Text(
+          "We need to register your phone number before getting started..",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: ResponsiveUtility.fontSize(12),
+            color: isDark ? AppColors.white.withValues(alpha: 0.6) : AppColors.grey,
+          ),
+        ),
+        SizedBox(height: ResponsiveUtility.height(25)),
+
+        /// -- Phone number and country code input field section.
         Row(
           children: [
+            // Country code
             Container(
-              height: scale.getScaledHeight(48),
-              width: scale.getScaledWidth(64),
+              width: ResponsiveUtility.width(75),
+              height: ResponsiveUtility.height(50),
               alignment: Alignment.center,
-              decoration: _fieldDecoration(scale),
-              child: Text("+91", style: TextStyle(color: AppColors.white, fontSize: scale.getScaledFont(13),),),
+              decoration: fieldDecoration(isDark: isDark),
+              child: const Text("+91", style: TextStyle(fontWeight: FontWeight.w500,),),
             ),
-            SizedBox(width: scale.getScaledWidth(8)),
+            SizedBox(width: ResponsiveUtility.height(10)),
+
+            // Phone number input field
             Expanded(
               child: Container(
-                height: scale.getScaledHeight(48),
-                decoration: _fieldDecoration(scale),
-                padding: EdgeInsets.symmetric(
-                  horizontal: scale.getScaledWidth(12),
-                ),
+                height: ResponsiveUtility.height(50),
+                decoration: fieldDecoration(isDark: isDark),
+                padding: ResponsiveUtility.symmetric(horizontal: 15),
                 child: Row(
                   children: [
-                    Icon(Icons.phone, color: AppColors.white.withValues(alpha: 0.6), size: scale.getScaledWidth(18),),
-                    SizedBox(width: scale.getScaledWidth(8)),
+                    const Icon(Icons.phone_outlined, size: 20,),
+                    SizedBox(width: ResponsiveUtility.width(10)),
+
                     Expanded(
-                      child: TextField(
-                        controller: controller.phoneController,
-                        keyboardType: TextInputType.phone,
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: scale.getScaledFont(14),
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(10),
-                        ],
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: "Enter phone number",
-                          hintStyle: TextStyle(
-                            fontSize: scale.getScaledFont(13),
-                            color: AppColors.descriptionColor,
+                      child: Obx(() {
+                        final isLocked = controller.isPhoneFieldLocked;
+                        return TextField(
+                          controller: controller.phoneController,
+                          enabled: !isLocked,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: "Enter phone number",
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ),
                   ],
                 ),
               ),
-            ),
+            )
           ],
         ),
-        SizedBox(height: scale.getScaledHeight(12)),
+
+        SizedBox(height: ResponsiveUtility.height(16)),
+
         Obx(() {
           final showOtp = controller.showOtp.value;
           return Column(
             children: [
-              if (!showOtp)
+              if(!showOtp)
                 SizedBox(
                   width: double.infinity,
+                  height: ResponsiveUtility.height(50),
                   child: ElevatedButton(
-                    onPressed:
-                        controller.isLoading.value ? null : controller.requestOtp,
+                    onPressed: controller.isLoading.value ? null : controller.requestOtp,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.white,
-                      foregroundColor: AppColors.purple3,
-                      elevation: 0,
-                      padding: EdgeInsets.symmetric(
-                        vertical: scale.getScaledHeight(12),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: isDark ? AppColors.white : AppColors.primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ResponsiveUtility.radius(8)),),
                     ),
-                    child: controller.isLoading.value
-                        ? SizedBox(
-                            height: scale.getScaledHeight(18),
-                            width: scale.getScaledWidth(18),
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation(AppColors.purple3),
-                            ),
-                          )
-                        : Text(
-                            "Request OTP",
-                            style: TextStyle(
-                              fontSize: scale.getScaledFont(14),
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.purple3,
-                            ),
-                          ),
+                    child: controller.isLoading.value ?
+                    const CircularProgressIndicator(color: Colors.white, strokeWidth: 2,):
+                    Text("Request OTP", style: TextStyle(color: isDark ? AppColors.primaryColor : Colors.white, fontSize: ResponsiveUtility.fontSize(16),),),
                   ),
                 ),
 
-              /// -- OTP Input Textfield
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: showOtp
-                    ? Column(
-                        key: const ValueKey("otp-section"),
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Enter OTP",
-                              style: TextStyle(
-                                fontSize: scale.getScaledFont(12),
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: scale.getScaledHeight(8)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(
-                              6,
-                              (index) => _buildOtpBox(index, scale),
-                            ),
-                          ),
-                          SizedBox(height: scale.getScaledHeight(12)),
-
-                          /// -- Verify OTP Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: controller.isLoading.value
-                                  ? null
-                                  : controller.verifyOtp,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.white,
-                                foregroundColor: AppColors.purple3,
-                                elevation: 0,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: scale.getScaledHeight(12),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: controller.isLoading.value
-                                  ? SizedBox(
-                                      height: scale.getScaledHeight(18),
-                                      width: scale.getScaledWidth(18),
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(
-                                          AppColors.purple3,
-                                        ),
-                                      ),
-                                    )
-                                  : Text(
-                                      "Verify OTP",
-                                      style: TextStyle(
-                                        fontSize: scale.getScaledFont(14),
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.purple3,
-                                      ),
-                                    ),
-                            ),
-                          ),
-
-                          /// -- Resend OTP Section
-                          SizedBox(height: scale.getScaledHeight(8)),
-                          Align(
-                            alignment: Alignment.center,
-                            child: controller.secondsLeft.value > 0
-                                ? RichText(
-                                    text: TextSpan(
-                                      style: TextStyle(
-                                        fontSize: scale.getScaledFont(11),
-                                        color: AppColors.descriptionColor,
-                                      ),
-                                      children: [
-                                        const TextSpan(text: "Resend OTP in "),
-                                        TextSpan(
-                                          text:
-                                              "${controller.secondsLeft.value}s",
-                                          style: TextStyle(
-                                            color: AppColors.purple1,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : SizedBox(
-                                    height: scale.getScaledHeight(34),
-                                    child: TextButton(
-                                      onPressed: controller.resendOtp,
-                                      child: Text(
-                                        "Resend OTP",
-                                        style: TextStyle(
-                                          fontSize: scale.getScaledFont(11),
-                                          color: AppColors.purple1,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      )
-                    : const SizedBox.shrink(),
-              ),
+                duration: const Duration(milliseconds: 300),
+                child: showOtp ? Column(
+                  children: [
+                    SizedBox(height: ResponsiveUtility.height(20)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(6, (index) => buildOtpBox(index, isDark: isDark),),
+                    ),
+                    SizedBox(height: ResponsiveUtility.height(20)),
+                    SizedBox(
+                      width: double.infinity,
+                      height: ResponsiveUtility.height(50),
+                      child: ElevatedButton(
+                        onPressed: controller.isLoading.value ? null : controller.verifyOtp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                        ),
+                        child: controller.isLoading.value ? CircularProgressIndicator(color: AppColors.white, strokeWidth: 2,): const Text("Verify OTP", style: TextStyle(color: Colors.white,),),
+                      ),
+                    )
+                  ],
+                ) : const SizedBox(),
+              )
             ],
           );
         }),
+        SizedBox(height: ResponsiveUtility.height(14)),
 
-        SizedBox(height: scale.getScaledHeight(8)),
-
-        /// -- Terms & Condition and Privacy Policy
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: TextStyle(
-              fontSize: scale.getScaledFont(11),
-              color: AppColors.descriptionColor,
-            ),
+            style: TextStyle(color: isDark? AppColors.white : Colors.grey, fontSize: ResponsiveUtility.fontSize(10.5),),
             children: [
               const TextSpan(text: "By continuing, you agree to our "),
               TextSpan(
                 text: "Terms & Condition",
-                style: TextStyle(color: AppColors.blue),
-                recognizer: _termsRecognizer
-                  ..onTap = () {
-                    Get.snackbar(
-                      "Terms & Condition",
-                      "Terms & Condition tapped.",
-                    );
-                  },
+                style: TextStyle(color: isDark ? Colors.blue : AppColors.blue),
+                recognizer: _termsRecognizer..onTap = () {
+                  /// -- navigation to terms and condition google doc
+                  HelperFunctions.launchURL(termsAndConditionURL);
+                },
               ),
               const TextSpan(text: " and "),
               TextSpan(
                 text: "Privacy policy",
-                style: TextStyle(color: AppColors.blue),
-                recognizer: _privacyRecognizer
-                  ..onTap = () {
-                    Get.snackbar("Privacy policy", "Privacy policy tapped.");
-                  },
+                style: TextStyle(color: isDark ? Colors.blue : AppColors.blue),
+                recognizer: _privacyRecognizer..onTap = () {
+                  /// -- navigation to privacy policy google doc
+                  HelperFunctions.launchURL(privacyPolicyURL);
+                },
               ),
-              const TextSpan(text: "."),
             ],
           ),
         ),
+        SizedBox(height: ResponsiveUtility.height(30)),
 
-        /// -- Register as Professional Section
-        SizedBox(height: scale.getScaledHeight(18)),
         Obx(() {
-          if (!controller.showProfessionalSection.value) {
-            return const SizedBox.shrink();
+
+          if (!controller.showProfessionalSection.value || controller.showOtp.value) {
+            return const SizedBox();
           }
           return Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: scale.getScaledWidth(14),
-              vertical: scale.getScaledHeight(14),
-            ),
+            padding: ResponsiveUtility.all(12),
             decoration: BoxDecoration(
-              color: Color(0xff0B0A12).withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Color(0xff1E2939)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.purple2.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              color: isDark ? Color(0xff0B0A12).withValues(alpha: 0.4): Colors.white,
+              borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
+              border: Border.all(color: isDark ? Color(0xff1E2939): Colors.black26,),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      color: AppColors.purple1,
-                      size: scale.getScaledWidth(18),
-                    ),
-                    SizedBox(width: scale.getScaledWidth(6)),
-                    Text(
-                      "Register as professional",
-                      style: TextStyle(
-                        fontSize: scale.getScaledFont(12),
-                        color: AppColors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Icon(Icons.person_outline, color: AppColors.primaryColor,),
+                    SizedBox(width: ResponsiveUtility.width(8)),
+                    Text("Register as professional", style: TextStyle(fontWeight: FontWeight.w600,),)
                   ],
                 ),
-                SizedBox(height: scale.getScaledHeight(6)),
-                Text(
-                  "Offer your services, connect with customers, and grow your professional network. Complete a quick verification using your phone number and Aadhaar details to create your professional account and start receiving bookings.",
-                  style: TextStyle(
-                    fontSize: scale.getScaledFont(11),
-                    color: AppColors.descriptionColor,
-                  ),
-                ),
-                SizedBox(height: scale.getScaledHeight(12)),
+                SizedBox(height: ResponsiveUtility.height(10)),
 
-                /// -- Start as Professional Button
+                Text(
+                  "Offer your services, connect with customers, and grow your professional network. Complete a quick verification using your phone number and Aadhaar details.",
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: ResponsiveUtility.fontSize(12),),
+                ),
+                SizedBox(height: ResponsiveUtility.height(10)),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: controller.startProfessionalFlow,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.white,
-                      foregroundColor: AppColors.purple3,
-                      padding: EdgeInsets.symmetric(
-                        vertical: scale.getScaledHeight(10),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
                     ),
-                    child: Text(
-                      "Start as Professional",
-                      style: TextStyle(
-                        fontSize: scale.getScaledFont(13),
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.purple3,
-                      ),
-                    ),
+                    child: Text("Start as Professional", style: TextStyle(color: isDark ? AppColors.primaryColor : Colors.white),),
                   ),
-                ),
+                )
               ],
             ),
           );
         }),
-        SizedBox(height: scale.getScaledHeight(12)),
       ],
     );
   }

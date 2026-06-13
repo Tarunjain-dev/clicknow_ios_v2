@@ -1,6 +1,9 @@
 class ApiConstants {
   ApiConstants._();
 
+  /// -- Google Maps Platform (replace with your real key before release)
+  static const String googleMapsApiKey = "AIzaSyB-dQl3IfZ7gFQBSoEKPqi6NZtH7ZHNLAw";
+
   /// -- Base URL
   static const String baseUrl = "https://clicknow.onrender.com/api/v1";
 

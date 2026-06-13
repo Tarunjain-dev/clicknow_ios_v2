@@ -8,6 +8,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+fun resolveGoogleMapsApiKey(): String {
+    val apiConstantsFile = rootProject.file("../lib/app/utils/device_constants/apiConstants.dart")
+    if (!apiConstantsFile.exists()) {
+        return ""
+    }
+    val fileContent = apiConstantsFile.readText()
+    val match = Regex("""googleMapsApiKey\s*=\s*['"]([^'"]+)['"]""").find(fileContent)
+    return match?.groupValues?.getOrNull(1)?.trim().orEmpty()
+}
+
+val googleMapsApiKey: String = resolveGoogleMapsApiKey()
+
 android {
     namespace = "com.example.clicknow_version2"
     compileSdk = flutter.compileSdkVersion
@@ -31,6 +43,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
     }
 
     buildTypes {

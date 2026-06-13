@@ -1,10 +1,13 @@
 import 'package:clicknow_version2/app/screens/professional/getx/professionalRegistrationController.dart';
 import 'package:clicknow_version2/app/screens/professional/getx/stepper_controller.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
+import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
+import 'package:clicknow_version2/app/widgets/searchable_multi_selection_bottom_sheet.dart';
+import 'package:clicknow_version2/app/widgets/searchable_selection_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:multi_dropdown/multi_dropdown.dart';
 
 class StepThreeBodyScreen extends StatefulWidget {
   const StepThreeBodyScreen({super.key});
@@ -18,9 +21,15 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
   final _formKey = GlobalKey<FormState>();
   final controller = Get.find<ProfessionalRegistrationController>();
   final stepperController = Get.find<StepperController>();
+  bool get _isDark => HelperFunctions.isDarkMode(context);
+  Color get _textPrimary => _isDark ? Colors.white : Colors.black;
+  Color get _textSecondary => _isDark ? Colors.white60 : Colors.black.withValues(alpha: 0.6);
 
   @override
   Widget build(BuildContext context) {
+
+    /// -- Dark Mode Utility
+    final isDark = HelperFunctions.isDarkMode(context);
 
     /// -- Scaling Utility Instance
     final scale = ScalingUtility(context: context);
@@ -28,12 +37,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+      padding: ResponsiveUtility.only(left: 16, top: 16, right: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16,),
       child: Form(
         key: _formKey,
         child: Column(
@@ -43,32 +47,33 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   /// Step 3 Title and description
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(10, 10, 10, 4),
+                  Padding(
+                    padding: ResponsiveUtility.only(bottom:4, left: 10, right: 10,  top: 10),
                     child: Text(
                       "Build Your Professional Profile",
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
+                        color: _textPrimary,
+                        fontSize: ResponsiveUtility.fontSize(16),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
+                  Padding(
+                    padding: ResponsiveUtility.symmetric(horizontal: 10),
                     child: Text(
                       "This information will be visible to clicknow customers and helpful for us to deliver booking orders.",
-                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                      style: TextStyle(color: _textSecondary, fontSize: ResponsiveUtility.fontSize(12)),
                     ),
                   ),
-                  const Divider(color: Color(0xff1E2939)),
+                  Divider(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
 
                   Padding(
-                    padding: const EdgeInsets.all(10),
+                    padding: ResponsiveUtility.all(10),
                     child: Column(
                       children: [
-                        /// --  Work Information Section
+                        // --  Work Information Section
                         _buildExpandable(
                           title: "Work Information",
                           icon: Icons.work_outline,
@@ -76,7 +81,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                           onTap: controller.toggleWork,
                           child: _workSection(),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// -- Working Locations Section
                         _buildExpandable(
@@ -86,7 +91,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                           onTap: controller.toggleWorkingLocation,
                           child: _workingLocationSection(),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// -- Profile & Online Presence Section
                         _buildExpandable(
@@ -96,7 +101,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                           onTap: controller.toggleProfile,
                           child: _profileSection(),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// -- Additional Details
                         _buildExpandable(
@@ -111,7 +116,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                   ),
 
                   /// -- back and Continue Buttons
-                  const Divider(color: Color(0xff1E2939), height: 2),
+                  Divider(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), height: 2),
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -119,7 +124,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                         bottomLeft: Radius.circular(10),
                         bottomRight: Radius.circular(10),
                       ),
-                      color: const Color(0xff101425),
+                      color: _isDark ? const Color(0xff101425) : const Color(0xffF6F6F6),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -134,15 +139,15 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                             child: SizedBox(
                               height: scale.getScaledHeight(40),
                               child: ElevatedButton(
-                                onPressed: () =>
-                                    stepperController.previousStep(),
+                                onPressed: () => stepperController.previousStep(),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xff13182C),
+                                  backgroundColor: isDark ? const Color(0xff13182C) : Colors.white,
+                                  elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadiusGeometry.circular(
                                       10,
                                     ),
-                                    side: BorderSide(color: Color(0xff1E2939)),
+                                    side: BorderSide(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
                                   ),
                                 ),
                                 child: Row(
@@ -150,14 +155,14 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                                   children: [
                                     Icon(
                                       Icons.arrow_back,
-                                      color: Colors.white,
+                                          color: isDark ? Colors.white : Colors.black54,
                                       size: 22,
                                     ),
                                     SizedBox(width: scale.getScaledWidth(8)),
                                     Text(
                                       "Back",
                                       style: TextStyle(
-                                        color: Colors.white,
+                                    color: isDark ? Colors.white : Colors.black54,
                                         fontWeight: FontWeight.bold,
                                         fontSize: scale.getScaledFont(14),
                                       ),
@@ -174,13 +179,14 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                             child: SizedBox(
                               height: scale.getScaledHeight(40),
                               child: ElevatedButton(
-                                onPressed: () {
+                                onPressed: () async {
                                   if (controller.validateStep3()) {
-                                    stepperController.nextStep();
+                                    await controller.saveDraftForStep(2);
+                                    await stepperController.completeStepAndContinue(2);
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
+                                  backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadiusGeometry.circular(
                                       10,
@@ -190,7 +196,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                                 child: Text(
                                   "Continue",
                                   style: TextStyle(
-                                    color: AppColors.purple3,
+                                    color: isDark ? AppColors.purple3 : Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: scale.getScaledFont(14),
                                   ),
@@ -227,12 +233,12 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
             ListTile(
               onTap: onTap,
               leading: Icon(icon, color: const Color(0xff9235B1)),
-              title: Text(title, style: const TextStyle(color: Colors.white)),
+              title: Text(title, style: TextStyle(color: _textPrimary)),
               trailing: Icon(
                 isExpanded.value
                     ? Icons.keyboard_arrow_up
                     : Icons.keyboard_arrow_down,
-                color: Colors.white,
+                color: _textPrimary,
               ),
             ),
             if (isExpanded.value)
@@ -250,43 +256,39 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
       children: [
         /// Experience Dropdown
         _fieldLabel("Years of Experience"),
-        const SizedBox(height: 6),
+        SizedBox(height: ResponsiveUtility.height(6)),
         Theme(
           data: Theme.of(context).copyWith(hintColor: Color(0xff5B6274)),
           child: Obx(
             () => DropdownButtonFormField(
-              initialValue: controller.selectedExperience.value.isEmpty
-                  ? null
-                  : controller.selectedExperience.value,
-              dropdownColor: const Color(0xff1C1736),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              initialValue: controller.selectedExperience.value.isEmpty ? null : controller.selectedExperience.value,
+              dropdownColor: _isDark ? const Color(0xff1C1736) : Colors.white,
+              style: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(14)),
               items: controller.experienceOptions
                   .map(
                     (e) => DropdownMenuItem(
                       value: e,
                       child: Text(
                         e,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: _textPrimary),
                       ),
                     ),
                   )
                   .toList(),
-              onChanged: (val) =>
-                  controller.selectedExperience.value = val ?? "",
+              onChanged: (val) => controller.selectedExperience.value = val ?? "",
               decoration: _dropdownDecoration("Enter Years"),
             ),
           ),
         ),
-
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtility.height(10)),
 
         /// Working Days Chips
         _fieldLabel("Available Working Days"),
-        const SizedBox(height: 6),
+        SizedBox(height: ResponsiveUtility.height(6)),
 
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: ResponsiveUtility.width(8),
+          runSpacing: ResponsiveUtility.width(8),
           children: controller.workingDaysOptions
               .map(
                 (day) => Obx(() {
@@ -294,19 +296,19 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
                   return GestureDetector(
                     onTap: () => controller.toggleWorkingDay(day),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
+                      padding: ResponsiveUtility.symmetric(vertical: 8, horizontal: 14),
                       decoration: BoxDecoration(
-                        color: selected
-                            ? const Color(0xff360248)
-                            : const Color(0xff2A2E3F),
+                        color: selected ?
+                               _isDark ? AppColors.purple3 : Color(0xff9810FA) :
+                               _isDark ? Color(0xff2A2E3F) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         day,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: selected ? Colors.white : (_isDark ? Colors.white70 : Colors.black54),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   );
@@ -314,17 +316,16 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
               )
               .toList(),
         ),
-
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtility.height(10)),
 
         /// Short Bio
         _fieldLabel("Short Bio"),
-        const SizedBox(height: 6),
+        SizedBox(height: ResponsiveUtility.height(6)),
         TextFormField(
           controller: controller.shortBioController,
           maxLength: 300,
           maxLines: 4,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _textPrimary),
           decoration: _inputDecoration(
             "Tell Customers about yourself and your expertise...",
           ),
@@ -339,95 +340,116 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _fieldLabel("Working State"),
-        const SizedBox(height: 6),
-        Theme(
-          data: Theme.of(context).copyWith(hintColor: Color(0xff5B6274)),
-          child: Obx(
-            () => DropdownButtonFormField<String>(
-              initialValue: controller.selectedWorkingState.value.isEmpty
-                  ? null
-                  : controller.selectedWorkingState.value,
-              dropdownColor: const Color(0xff1C1736),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              items: controller.stateOptions
-                  .map(
-                    (state) => DropdownMenuItem(
-                      value: state,
-                      child: Text(
-                        state,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: controller.onWorkingStateChanged,
-              decoration: _dropdownDecoration("Select working state"),
-            ),
+        SizedBox(height: ResponsiveUtility.height(6)),
+        Obx(
+          () => _selectorField(
+            hint: "Select working state",
+            value: controller.selectedWorkingState.value,
+            onTap: () async {
+              final selected = await SearchableSelectionBottomSheet.show(
+                context: context,
+                title: 'Select Working State',
+                options: controller.stateOptions,
+                initialValue: controller.selectedWorkingState.value,
+                searchHint: 'Search state',
+              );
+              if (selected == null) {
+                return;
+              }
+              controller.onWorkingStateChanged(selected);
+            },
           ),
         ),
+        SizedBox(height: ResponsiveUtility.height(10)),
 
-        const SizedBox(height: 12),
+        /// -- Working City
         _fieldLabel("Working City"),
-        const SizedBox(height: 6),
+        SizedBox(height: ResponsiveUtility.height(6)),
         Obx(() {
           final cities = controller.currentWorkingCityOptions;
-          return Container(
-            decoration: _multiFieldContainerDecoration(),
-            child: MultiDropdown<String>(
-              key: ValueKey(controller.selectedWorkingState.value),
-              items: cities
-                  .map((city) => DropdownItem(label: city, value: city))
-                  .toList(),
-              onSelectionChange: (selectedItems) {
-                controller.selectedWorkingCities.assignAll(selectedItems);
-              },
-              fieldDecoration: _multiFieldDecoration("Select working city"),
-            ),
+          final selectedCities = controller.selectedWorkingCities.toList(growable: false);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _multiSelectorField(
+                hint: "Select working city",
+                values: selectedCities,
+                enabled: cities.isNotEmpty,
+                onTap: () async {
+                  if (cities.isEmpty) {
+                    return;
+                  }
+                  final picked = await SearchableMultiSelectionBottomSheet.show(
+                    context: context,
+                    title: 'Select Working City',
+                    options: cities,
+                    initialValues: selectedCities,
+                    searchHint: 'Search city',
+                  );
+                  if (picked == null) {
+                    return;
+                  }
+                  controller.selectedWorkingCities.assignAll(picked);
+                },
+              ),
+              if (selectedCities.isNotEmpty) ...[
+                SizedBox(height: ResponsiveUtility.height(8)),
+                Wrap(
+                  spacing: ResponsiveUtility.width(8),
+                  runSpacing: ResponsiveUtility.width(8),
+                  children: selectedCities
+                      .map(
+                        (city) => Chip(
+                          backgroundColor: Color(0xff9810FA) ,
+                          side: BorderSide(color: Colors.white),
+                          label: Text(city, style: TextStyle(color: Colors.white),),
+                          onDeleted: () {
+                            controller.selectedWorkingCities.remove(city);
+                          },
+                          deleteIcon: Icon(Icons.cancel_outlined, size: 16, color: Colors.white,),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ],
+            ],
           );
         }),
 
-        const SizedBox(height: 12),
+        SizedBox(height: ResponsiveUtility.height(6)),
         Row(
           children: [
             Expanded(
               child: ElevatedButton(
-                onPressed: controller.saveWorkingLocation,
+                onPressed: () => controller.saveWorkingLocation(clearAfter: true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xff360248),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  backgroundColor: _isDark ? Colors.white : AppColors.primaryColor,
+                  foregroundColor: _isDark ? AppColors.primaryColor : Colors.white,
+                  padding: ResponsiveUtility.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text(
-                  "Save Location",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: const Text("Save Location", style: TextStyle(fontWeight: FontWeight.bold),),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: ResponsiveUtility.width(8)),
             Expanded(
               child: ElevatedButton(
                 onPressed: controller.addMoreWorkingLocation,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xff360248),
+                  backgroundColor: _isDark ? Colors.white : AppColors.primaryColor,
+                  foregroundColor: _isDark ? AppColors.primaryColor : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),),
                 ),
-                child: const Text(
-                  "Add More",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: const Text("Add More", style: TextStyle(fontWeight: FontWeight.bold),),
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: ResponsiveUtility.height(10)),
         Obx(() {
           if (controller.workingLocations.isEmpty) {
             return const SizedBox();
@@ -435,24 +457,24 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Selected Working Locations :",
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54, fontSize: ResponsiveUtility.fontSize(12)),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: ResponsiveUtility.height(6)),
               ...controller.workingLocations.map((loc) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: ResponsiveUtility.only(bottom: 2),
                   child: Text(
                     "- ${loc.state} : ${loc.cities.join(", ")}",
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: _isDark ? Colors.white70 : Colors.black54, fontSize: ResponsiveUtility.fontSize(12)),
                   ),
                 );
               }),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: ResponsiveUtility.height(6)),
+              Text(
                 "Note : These are the locations you are willingly wanted to work.",
-                style: TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54, fontSize: ResponsiveUtility.fontSize(10)),
               ),
             ],
           );
@@ -510,34 +532,96 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
   Widget _fieldLabel(String text, {bool optional = false}) {
     return Row(
       children: [
-        Text(text, style: const TextStyle(color: Colors.white)),
+        Text(text, style: TextStyle(color: _textPrimary)),
         if (optional) const SizedBox(width: 6),
         if (optional)
-          const Text(
+          Text(
             "[optional]",
-            style: TextStyle(color: Colors.white54, fontSize: 11),
+            style: TextStyle(color: _isDark ? Colors.white54 : Colors.black54, fontSize: 11),
           ),
       ],
     );
   }
 
-  BoxDecoration _multiFieldContainerDecoration() {
-    return BoxDecoration(
-      color: const Color(0xff1C1736).withValues(alpha: 0.8),
+  Widget _selectorField({
+    required String hint,
+    required String value,
+    required Future<void> Function() onTap,
+    bool enabled = true,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: const Color(0xff1E2939)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.85) : const Color(0xffF6F4FF).withValues(alpha: 0.9),
+          border: Border.all(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value.trim().isEmpty ? hint : value.trim(),
+                style: TextStyle(
+                  color: value.trim().isEmpty
+                      ? const Color(0xff5B6274)
+                      : _textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: Color(0xff69729A)),
+          ],
+        ),
+      ),
     );
   }
 
-  FieldDecoration _multiFieldDecoration(String hint) {
-    return FieldDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xff5B6274)),
-      border: InputBorder.none,
-      focusedBorder: InputBorder.none,
-      suffixIcon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      showClearIcon: false,
+  BoxDecoration _multiFieldContainerDecoration() {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: Color(0xff1E2939)),
+    );
+  }
+
+  Widget _multiSelectorField({
+    required String hint,
+    required List<String> values,
+    required Future<void> Function() onTap,
+    bool enabled = true,
+  }) {
+    final label = values.isEmpty ? hint : values.join(', ');
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: _multiFieldContainerDecoration().copyWith(
+          color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.85) : const Color(0xffF6F4FF).withValues(alpha: 0.9),
+          border: Border.all(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: values.isEmpty
+                      ? const Color(0xff5B6274)
+                      : _textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: Color(0xff69729A)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -546,7 +630,7 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
   Widget _textField(TextEditingController controller, String hint) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: _textPrimary),
       decoration: _inputDecoration(hint),
     );
   }
@@ -554,38 +638,44 @@ class _StepThreeBodyScreenState extends State<StepThreeBodyScreen> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: const Color(0xff1C1736).withValues(alpha: 0.8),
+      fillColor: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.8) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xff5B6274)),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      hintStyle: TextStyle(color: _isDark ? const Color(0xff5B6274) : Colors.black54),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? AppColors.primaryColor : Color(0xffD9D9D9))),
     );
   }
 
   InputDecoration _dropdownDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: const Color(0xff1C1736).withValues(alpha: 0.8),
-      labelStyle: const TextStyle(color: Colors.white, fontSize: 14),
+      fillColor: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.8) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
+      labelStyle: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(12)),
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xff5B6274)),
-      helperStyle: const TextStyle(color: Colors.white, fontSize: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      hintStyle: TextStyle(color: _isDark ? const Color(0xff5B6274) : Colors.black54),
+      helperStyle: TextStyle(color: _textPrimary, fontSize: ResponsiveUtility.fontSize(12)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? AppColors.primaryColor : Color(0xffD9D9D9))),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Colors.red : Color(0xffD9D9D9))),
+      disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDark ? Color(0xff1E2939) : Color(0xffD9D9D9))),
     );
   }
 
   BoxDecoration _mainContainer() {
     return BoxDecoration(
       borderRadius: BorderRadius.circular(10),
-      color: const Color(0xff1C1736).withValues(alpha: 0.5),
-      border: Border.all(color: const Color(0xff1E2939)),
+      color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.5) : const Color(0xffFCFBFF),
+      border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
     );
   }
 
   BoxDecoration _innerContainer() {
     return BoxDecoration(
       borderRadius: BorderRadius.circular(10),
-      color: const Color(0xff1C1736).withValues(alpha: 0.8),
-      border: Border.all(color: const Color(0xff1E2939)),
+      color: _isDark ? const Color(0xff1C1736).withValues(alpha: 0.8) : const Color(0xffF6F4FF).withValues(alpha: 0.8),
+      border: Border.all(color: _isDark ? const Color(0xff1E2939) : const Color(0xffD9D9D9)),
     );
   }
 }
