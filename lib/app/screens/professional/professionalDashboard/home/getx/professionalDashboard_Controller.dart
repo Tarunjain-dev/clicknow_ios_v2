@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:clicknow_version2/app/services/booking/booking_service.dart';
+import 'package:clicknow_version2/app/services/notifications/notification_repository.dart';
 import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,19 +17,21 @@ class ProfessionalDashboardController extends GetxController {
 
   final RxString professionalName = 'Professional'.obs;
   final RxString profileStatus = 'approved'.obs;
-  final RxBool isAvailableForBooking = false.obs;
+  final RxBool isAvailableForBooking = true.obs;
 
   final RxInt todaysBookings = 0.obs;
   final RxInt upcomingBookings = 0.obs;
   final RxInt pendingAcceptance = 0.obs;
   final RxInt activeBookings = 0.obs;
   final RxInt monthlyRevenue = 0.obs;
+  final RxInt notificationCount = 0.obs;
   final RxList<ProfessionalDashboardBooking> currentActiveBookings =
       <ProfessionalDashboardBooking>[].obs;
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
   StreamSubscription<List<ProfessionalBookingRecord>>? _bookingSub;
   StreamSubscription<User?>? _authSub;
+  StreamSubscription<int>? _notificationCountSub;
 
   String? get _uid => _auth.currentUser?.uid;
 
@@ -50,9 +53,11 @@ class ProfessionalDashboardController extends GetxController {
     super.onInit();
     _listenProfile();
     _bindBookings();
+    _bindNotificationCount();
     _authSub = _auth.authStateChanges().listen((_) {
       _listenProfile();
       _bindBookings();
+      _bindNotificationCount();
     });
   }
 
@@ -166,20 +171,36 @@ class ProfessionalDashboardController extends GetxController {
       availability['visibilityStatus'],
       availability['status'],
     ]).toLowerCase();
-    final onlineByAvailability =
+    final hasAvailabilityFlag =
+        availability.containsKey('isVisibleForBooking') ||
+        availability.containsKey('isAvailableForBooking');
+    final onlineByAvailabilityFlag =
         _toBool(availability['isVisibleForBooking']) ||
-        _toBool(availability['isAvailableForBooking']) ||
-        const <String>{
-          'online',
-          'active',
-          'available',
-        }.contains(visibilityStatus);
+        _toBool(availability['isAvailableForBooking']);
+    final onlineByAvailabilityStatus = const <String>{
+      'online',
+      'active',
+      'available',
+    }.contains(visibilityStatus);
+    final offlineByAvailabilityStatus = const <String>{
+      'offline',
+      'inactive',
+      'unavailable',
+    }.contains(visibilityStatus);
     final onlineByStatus = <String>{
       'online',
       'active',
       'available',
     }.contains(profileStatus.value);
-    isAvailableForBooking.value = onlineByAvailability || onlineByStatus;
+
+    if (hasAvailabilityFlag) {
+      isAvailableForBooking.value = onlineByAvailabilityFlag;
+    } else if (visibilityStatus.isNotEmpty) {
+      isAvailableForBooking.value =
+          onlineByAvailabilityStatus || !offlineByAvailabilityStatus;
+    } else {
+      isAvailableForBooking.value = onlineByStatus || isApproved;
+    }
   }
 
   void _bindBookings() {
@@ -278,6 +299,20 @@ class ProfessionalDashboardController extends GetxController {
     currentActiveBookings.clear();
   }
 
+  void _bindNotificationCount() {
+    _notificationCountSub?.cancel();
+    if (_uid == null) {
+      notificationCount.value = 0;
+      return;
+    }
+    _notificationCountSub = NotificationRepository.instance
+        .watchCurrentUserUnreadCount()
+        .listen(
+          (count) => notificationCount.value = count,
+          onError: (_) => notificationCount.value = 0,
+        );
+  }
+
   static const Set<String> _activeDashboardStatuses = <String>{
     'ASSIGNED',
     'CONFIRMED',
@@ -350,6 +385,7 @@ class ProfessionalDashboardController extends GetxController {
     _profileSub?.cancel();
     _bookingSub?.cancel();
     _authSub?.cancel();
+    _notificationCountSub?.cancel();
     super.onClose();
   }
 }

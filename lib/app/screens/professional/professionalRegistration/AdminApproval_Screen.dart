@@ -193,50 +193,6 @@ class AdminApprovalScreen extends StatelessWidget {
                         Expanded(child: _buildStepper(controller, isDark)),
 
                         Obx(() {
-                          if (controller.statusLabel.value !=
-                              'Document Re-upload Requested') {
-                            return const SizedBox();
-                          }
-                          final documents = controller
-                              .reuploadRequestedDocuments
-                              .map((item) => item.replaceAll('_', ' '))
-                              .join(', ');
-                          return Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(top: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xffF39A32,
-                              ).withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xffF39A32),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Admin has requested document re-upload.',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Please update the requested documents to continue verification.${documents.isEmpty ? '' : '\nRequested: $documents'}${controller.reuploadReason.value.isEmpty ? '' : '\nReason: ${controller.reuploadReason.value}'}',
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black87,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-
-                        Obx(() {
                           /// Why this block of code???
                           final comment = controller.adminComment.value.trim();
                           if (comment.isEmpty) {

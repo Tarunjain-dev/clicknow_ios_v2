@@ -1,4 +1,4 @@
-package com.example.clicknow_version2
+package com.clicknow.clicknow_version2
 
 import io.flutter.embedding.android.FlutterActivity
 

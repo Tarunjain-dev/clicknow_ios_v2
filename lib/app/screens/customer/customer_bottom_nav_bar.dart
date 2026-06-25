@@ -35,7 +35,7 @@ class CustomerBottomNavBar extends StatelessWidget {
         bottomNavigationBar: Obx(
           () => Container(
             height: ResponsiveUtility.height(72),
-            padding: ResponsiveUtility.symmetric(horizontal: 10, vertical: 8),
+            padding: ResponsiveUtility.symmetric(horizontal: 10, vertical: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -116,11 +116,11 @@ class CustomerBottomNavBar extends StatelessWidget {
                 child: Icon(
                   isActive ? activeIcon : icon,
                   key: ValueKey(isActive),
-                  size: 26,
+                  size: 24,
                   color: isActive ? Color(0xff700095) : Colors.grey,
                 ),
               ),
-              SizedBox(height: ResponsiveUtility.height(4)),
+              SizedBox(height: ResponsiveUtility.height(2)),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(

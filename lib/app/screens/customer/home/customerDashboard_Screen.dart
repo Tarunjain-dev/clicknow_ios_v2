@@ -11,6 +11,7 @@ import 'package:clicknow_version2/app/screens/customer/home/services/magicians/p
 import 'package:clicknow_version2/app/screens/customer/home/services/music/musicAndLivePerformance_Screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/services/photoAndVideography/photoAndVideoGraphy_Screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/services/weddingPlanner/weddingPlannerAndManagement_Screen.dart';
+import 'package:clicknow_version2/app/services/notifications/notification_repository.dart';
 import 'package:clicknow_version2/app/services/service_catalog_paths.dart';
 import 'package:clicknow_version2/app/screens/customer/profile/getx/customer_profile_controller.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
@@ -345,11 +346,15 @@ class CustomerDashboardScreen extends StatelessWidget {
                                 size: scale.getScaledWidth(10),
                               ),
                               SizedBox(width: scale.getScaledWidth(2)),
-                              Text(
-                                service.rating,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: scale.getScaledFont(10),
+                              Obx(
+                                () => Text(
+                                  controller.ratingForService(
+                                    service.catalogServiceId,
+                                  ),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: scale.getScaledFont(10),
+                                  ),
                                 ),
                               ),
                             ],
@@ -860,6 +865,7 @@ class CustomerDashboardController extends GetxController {
   final RxInt notificationCount = 0.obs;
   final RxInt currentBannerIndex = 0.obs;
   final RxMap<String, int> lowestServicePriceMap = <String, int>{}.obs;
+  final RxMap<String, double> serviceRatingMap = <String, double>{}.obs;
   final RxBool isActiveBookingsLoading = true.obs;
   final RxList<DashboardBooking> activeBookings = <DashboardBooking>[].obs;
   final CustomerBookingController _bookingController =
@@ -869,6 +875,9 @@ class CustomerDashboardController extends GetxController {
   final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
   _servicePriceSubscriptions =
       <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+  final List<StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+  _serviceStatsSubscriptions =
+      <StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>[];
   Worker? _cartCountWorker;
   final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
   _activeBookingSubs =
@@ -876,6 +885,7 @@ class CustomerDashboardController extends GetxController {
   final Map<String, List<DashboardBooking>> _activeBookingSourceCache =
       <String, List<DashboardBooking>>{};
   StreamSubscription<User?>? _authSub;
+  StreamSubscription<int>? _notificationCountSub;
   Timer? _activeBookingsTimeoutTimer;
   int _activeBookingsRequestId = 0;
   Worker? _bookingsTabWorker;
@@ -892,8 +902,13 @@ class CustomerDashboardController extends GetxController {
       lowestServicePriceMap[service.id] = 0;
     }
     _listenServiceLowestPrices();
+    _listenServiceStats();
     _bindActiveBookings();
-    _authSub = _auth.authStateChanges().listen((_) => _bindActiveBookings());
+    _bindNotificationCount();
+    _authSub = _auth.authStateChanges().listen((_) {
+      _bindActiveBookings();
+      _bindNotificationCount();
+    });
     _bookingsTabWorker = ever<List<CustomerBookingStatusItem>>(
       _bookingsTabController.bookings,
       (_) => _syncActiveBookingsFromCustomerBookingTab(),
@@ -939,7 +954,7 @@ class CustomerDashboardController extends GetxController {
       id: 'music',
       catalogServiceId: 'music_live_performance',
       title: 'Music & Live Performance',
-      subtitle: 'Professional Photo and video Coverage',
+      subtitle: 'Live Music and Performance for Every Occasion',
       imagePath: AppImages.musician,
       rating: '4.9',
     ),
@@ -947,7 +962,7 @@ class CustomerDashboardController extends GetxController {
       id: 'dj',
       catalogServiceId: 'professional_dj',
       title: 'Professional DJ Services',
-      subtitle: 'Professional Photo and video Coverage',
+      subtitle: 'High-Energy DJ Music and Event Entertainment',
       imagePath: AppImages.dj,
       rating: '4.9',
     ),
@@ -955,7 +970,7 @@ class CustomerDashboardController extends GetxController {
       id: 'wedding',
       catalogServiceId: 'live_wedding_painter',
       title: 'Live wedding painter',
-      subtitle: 'Professional Photo and video Coverage',
+      subtitle: 'Live Artistic Wedding Moments on Canvas',
       imagePath: AppImages.weddingPlanner,
       rating: '4.9',
     ),
@@ -963,7 +978,7 @@ class CustomerDashboardController extends GetxController {
       id: 'anchor',
       catalogServiceId: 'professional_anchor',
       title: 'Professional Anchor Services',
-      subtitle: 'Professional Photo and video Coverage',
+      subtitle: 'Engaging Event Hosting and Stage Management',
       imagePath: AppImages.anchor,
       rating: '4.9',
     ),
@@ -971,7 +986,7 @@ class CustomerDashboardController extends GetxController {
       id: 'magician',
       catalogServiceId: 'professional_magician',
       title: 'Professional Magician Services',
-      subtitle: 'Professional Photo and video Coverage',
+      subtitle: 'Interactive Magic Shows and Fun Entertainment',
       imagePath: AppImages.magician,
       rating: '4.9',
     ),
@@ -996,6 +1011,30 @@ class CustomerDashboardController extends GetxController {
           );
       _servicePriceSubscriptions.add(subscription);
     }
+  }
+
+  void _listenServiceStats() {
+    for (final service in services) {
+      serviceRatingMap[service.catalogServiceId] = 0;
+      final subscription = _db
+          .collection(ServiceCatalogPaths.serviceStatsCollection)
+          .doc(service.catalogServiceId)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              serviceRatingMap[service.catalogServiceId] =
+                  (snapshot.data()?['averageRating'] as num?)?.toDouble() ?? 0;
+            },
+            onError: (_) {
+              serviceRatingMap[service.catalogServiceId] = 0;
+            },
+          );
+      _serviceStatsSubscriptions.add(subscription);
+    }
+  }
+
+  String ratingForService(String serviceCatalogId) {
+    return (serviceRatingMap[serviceCatalogId] ?? 0).toStringAsFixed(1);
   }
 
   int _lowestPriceFromSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
@@ -1271,6 +1310,20 @@ class CustomerDashboardController extends GetxController {
     Get.to(() => const CustomerNotificationsScreen());
   }
 
+  void _bindNotificationCount() {
+    _notificationCountSub?.cancel();
+    if (_auth.currentUser == null || AuthController.isGuestModeActive) {
+      notificationCount.value = 0;
+      return;
+    }
+    _notificationCountSub = NotificationRepository.instance
+        .watchCurrentUserUnreadCount()
+        .listen(
+          (count) => notificationCount.value = count,
+          onError: (_) => notificationCount.value = 0,
+        );
+  }
+
   void onServiceTap(String serviceId) {
     switch (serviceId) {
       case 'photo':
@@ -1316,7 +1369,11 @@ class CustomerDashboardController extends GetxController {
     }
     _activeBookingsTimeoutTimer?.cancel();
     _authSub?.cancel();
+    _notificationCountSub?.cancel();
     for (final subscription in _servicePriceSubscriptions) {
+      subscription.cancel();
+    }
+    for (final subscription in _serviceStatsSubscriptions) {
       subscription.cancel();
     }
     super.onClose();

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/professional/professionalDashboard/profile/models/professional_profile_data.dart';
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
+import 'package:clicknow_version2/app/services/notifications/fcm_notification_service.dart';
 import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -224,6 +225,7 @@ class ProfessionalProfileController extends GetxController {
     }
     isLogoutInProgress.value = true;
     try {
+      await FcmNotificationService.instance.deactivateLastToken();
       await _auth.signOut();
       AuthController.instance.resetLocalAuthState(keepGuestMode: false);
       Get.offAllNamed(AppRoutes.loginRoute);

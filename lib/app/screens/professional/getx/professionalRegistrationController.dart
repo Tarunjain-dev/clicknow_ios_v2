@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clicknow_version2/app/data/india_locations.dart';
 import 'package:clicknow_version2/app/services/location_service.dart';
 import 'package:clicknow_version2/app/services/maps_service.dart';
 import 'package:clicknow_version2/app/services/service_catalog_paths.dart';
@@ -110,20 +111,9 @@ class ProfessionalRegistrationController extends GetxController {
   ];
   RxList<String> selectedLanguages = <String>[].obs;
   final TextEditingController permanentAddressController = TextEditingController();
-  final List<String> stateOptions = [
-    "Madhya Pradesh",
-    "Maharashtra",
-    "Uttar Pradesh",
-    "Rajasthan",
-    "Gujarat",
-  ];
-  final Map<String, List<String>> cityOptionsByState = {
-    "Madhya Pradesh": ["Bhopal", "Indore", "Ujjain", "Jabalpur", "Sagar"],
-    "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik"],
-    "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra"],
-    "Rajasthan": ["Jaipur", "Udaipur", "Jodhpur", "Kota"],
-    "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
-  };
+  final List<String> stateOptions = IndiaLocations.states;
+  final Map<String, List<String>> cityOptionsByState =
+      IndiaLocations.citiesByState;
   final Map<String, List<String>> pincodeOptionsByCity = {
     "Bhopal": ["462001", "462002", "462003"],
     "Indore": ["452001", "452002", "452003"],
@@ -764,8 +754,16 @@ class ProfessionalRegistrationController extends GetxController {
       <String>[];
 
   List<ServiceQuestionConfiguration> get activeServiceQuestions =>
-      serviceQuestionMap[_resolveServiceQuestionKey(selectedServiceType.value)] ??
-      <ServiceQuestionConfiguration>[];
+      (serviceQuestionMap[_resolveServiceQuestionKey(selectedServiceType.value)] ??
+              <ServiceQuestionConfiguration>[])
+          .where(
+            (question) => !const {
+              'hourlyPrice',
+              'packagePrice',
+              'packagePricePerEvent',
+            }.contains(question.id),
+          )
+          .toList(growable: false);
 
   void onServiceTypeChanged(String? value) {
     final next = value ?? "";
@@ -1309,6 +1307,8 @@ class ProfessionalRegistrationController extends GetxController {
   RxBool isPhoneVerified = false.obs;
   RxInt secondsRemaining = 60.obs;
   RxBool canResendOtp = false.obs;
+  RxInt failedOtpAttempts = 0.obs;
+  RxInt otpLockSecondsRemaining = 0.obs;
   RxBool isLoading = false.obs;
   RxBool isSubmittingProfile = false.obs;
   RxDouble uploadProgress = 0.0.obs;
@@ -1316,12 +1316,16 @@ class ProfessionalRegistrationController extends GetxController {
   RxBool isDraftLoaded = false.obs;
 
   Timer? _timer;
+  Timer? _otpLockTimer;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _serviceCatalogSub;
   String? _verificationId;
   int? _resendToken;
   ConfirmationResult? _confirmationResult;
   int _otpListenEpoch = 0;
   bool _phoneAuthSettingsConfigured = false;
+  bool get isOtpLocked => otpLockSecondsRemaining.value > 0;
+  String get resendCountdown => _formatCountdown(secondsRemaining.value);
+  String get otpLockCountdown => _formatCountdown(otpLockSecondsRemaining.value);
 
   Duration get _firebasePhoneAutoRetrievalTimeout {
     if (kIsWeb) {
@@ -1468,6 +1472,9 @@ class ProfessionalRegistrationController extends GetxController {
 
   /// -- Verify OTP via API
   void verifyOtp() async {
+    if (isOtpLocked || isLoading.value) {
+      return;
+    }
     if (otpController.text.length != 6) {
       AppSnackbar.error("Error", "Enter valid 6-digit OTP");
       return;
@@ -1487,6 +1494,7 @@ class ProfessionalRegistrationController extends GetxController {
           "+91${phoneController.text.trim()}",
         );
       } on FirebaseAuthException catch (e) {
+        _recordOtpFailure(e);
         AppSnackbar.error(
           "Verification Failed",
           e.message ?? "Invalid OTP. Please try again.",
@@ -1512,6 +1520,7 @@ class ProfessionalRegistrationController extends GetxController {
         "+91${phoneController.text.trim()}",
       );
     } on FirebaseAuthException catch (e) {
+      _recordOtpFailure(e);
       AppSnackbar.error(
         "Verification Failed",
         e.message ?? "Invalid OTP. Please try again.",
@@ -1523,7 +1532,7 @@ class ProfessionalRegistrationController extends GetxController {
 
   /// -- Start Timer
   void startTimer() {
-    secondsRemaining.value = 60;
+    secondsRemaining.value = 120;
     canResendOtp.value = false;
 
     _timer?.cancel();
@@ -1539,7 +1548,7 @@ class ProfessionalRegistrationController extends GetxController {
 
   /// -- Resend OTP via API
   void resendOtp() async {
-    if (!canResendOtp.value) return;
+    if (!canResendOtp.value || isOtpLocked || isLoading.value) return;
     if (phoneController.text.length != 10) {
       AppSnackbar.error("Error", "Enter valid 10-digit phone number");
       return;
@@ -1653,6 +1662,39 @@ class ProfessionalRegistrationController extends GetxController {
     );
   }
 
+  void _recordOtpFailure(FirebaseAuthException error) {
+    if (!const {
+      'invalid-verification-code',
+      'invalid-verification-id',
+      'session-expired',
+    }.contains(error.code)) {
+      return;
+    }
+    failedOtpAttempts.value++;
+    if (failedOtpAttempts.value < 5) return;
+    _otpLockTimer?.cancel();
+    otpLockSecondsRemaining.value = 600;
+    _otpLockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (otpLockSecondsRemaining.value <= 1) {
+        timer.cancel();
+        otpLockSecondsRemaining.value = 0;
+        failedOtpAttempts.value = 0;
+      } else {
+        otpLockSecondsRemaining.value--;
+      }
+    });
+    AppSnackbar.error(
+      "OTP Locked",
+      "Too many incorrect attempts. Please try again after 10 minutes.",
+    );
+  }
+
+  String _formatCountdown(int seconds) {
+    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+    final remainder = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$remainder';
+  }
+
   Future<void> _handlePhoneCredential(
     PhoneAuthCredential credential,
     String phoneNumber,
@@ -1661,6 +1703,7 @@ class ProfessionalRegistrationController extends GetxController {
       final userCredential = await _auth.signInWithCredential(credential);
       await _handleSignedInUser(userCredential.user, phoneNumber);
     } on FirebaseAuthException catch (e) {
+      _recordOtpFailure(e);
       AppSnackbar.error(
         "Verification Failed",
         e.message ?? "Unable to verify phone number.",
@@ -1675,6 +1718,9 @@ class ProfessionalRegistrationController extends GetxController {
     }
 
     await _upsertUser(user, phoneNumber, status: 'phone_verified');
+    failedOtpAttempts.value = 0;
+    otpLockSecondsRemaining.value = 0;
+    _otpLockTimer?.cancel();
     _localStorage.write(AuthController.hideGuestCtaStorageKey, true);
     _localStorage.write(AuthController.hideProfessionalCtaStorageKey, true);
     isPhoneVerified.value = true;
@@ -1682,6 +1728,7 @@ class ProfessionalRegistrationController extends GetxController {
     _confirmationResult = null;
     _stopOtpAutoFillListener();
     _timer?.cancel();
+    _otpLockTimer?.cancel();
     canResendOtp.value = true;
     secondsRemaining.value = 0;
     await persistStep1Draft(
@@ -2048,8 +2095,18 @@ class ProfessionalRegistrationController extends GetxController {
       AppSnackbar.error("Required", "Please enter account number.");
       return false;
     }
-    if (!RegExp(r'^[0-9]{8,18}$').hasMatch(accountNumberController.text.trim())) {
-      AppSnackbar.error("Invalid Value", "Enter a valid account number.");
+    if (!RegExp(r'^[0-9]+$').hasMatch(accountNumberController.text.trim())) {
+      AppSnackbar.error(
+        "Invalid Value",
+        "Account number must contain digits only.",
+      );
+      return false;
+    }
+    if (!RegExp(r'^[0-9]{9,18}$').hasMatch(accountNumberController.text.trim())) {
+      AppSnackbar.error(
+        "Invalid Value",
+        "Account number must be between 9 and 18 digits.",
+      );
       return false;
     }
     if (bankPassbookFileName.value.isEmpty || _bankPassbookFile == null) {
@@ -2201,10 +2258,7 @@ class ProfessionalRegistrationController extends GetxController {
           'aadhaarUrl': aadharUrl,
           'panUrl': panUrl,
         },
-        'availability': {
-          'urgentAvailable': urgentAvailable.value,
-          'willingToTravel': willingToTravel.value,
-        },
+        'availability': {'willingToTravel': willingToTravel.value},
         'agreements': {
           'cancellationAccepted': cancellationAccepted.value,
           'commissionAccepted': commissionAccepted.value,

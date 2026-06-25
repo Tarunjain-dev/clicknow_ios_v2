@@ -14,7 +14,7 @@ class AppColors {
   );
 
   // App Colors
-  static const Color primaryColor = Color(0xff360248);
+  static const Color primaryColor = Color(0xff23043E);
 
   // Common Colors
   static const Color white = Color(0xffFFFFFF);
@@ -34,11 +34,11 @@ class AppColors {
   /// -- Dark Theme Colors
   static const Color purple1 = Color(0xff9235B1);
   static const Color purple2 = Color(0xff570173);
-  static const Color purple3 = Color(0xff360248);
+  static const Color purple3 = Color(0xff23043E);
 
   /// -- Button Colors
   static const Color buttonBackground = Color(0xffFFFFFF);
-  static const Color buttonForeground = Color(0xff360248);
+  static const Color buttonForeground = Color(0xff23043E);
 
   /// -- Text Colors
   Color titleColor = Color(0xffffffff).withValues(alpha: 1.0);

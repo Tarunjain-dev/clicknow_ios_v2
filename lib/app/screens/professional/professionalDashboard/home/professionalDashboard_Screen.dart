@@ -164,28 +164,37 @@ class ProfessionalDashboardScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                right: -ResponsiveUtility.width(2),
-                top: -ResponsiveUtility.height(4),
-                child: Container(
-                  height: ResponsiveUtility.height(16),
-                  width: ResponsiveUtility.width(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? Color(0xff6C3DFF) : Color(0xff700095),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      "6",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: ResponsiveUtility.fontSize(8),
-                        fontWeight: FontWeight.w700,
+              Obx(() {
+                final count = controller.notificationCount.value;
+                if (count <= 0) {
+                  return const SizedBox.shrink();
+                }
+                return Positioned(
+                  right: -ResponsiveUtility.width(2),
+                  top: -ResponsiveUtility.height(4),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minHeight: ResponsiveUtility.height(16),
+                      minWidth: ResponsiveUtility.width(16),
+                    ),
+                    padding: ResponsiveUtility.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xff6C3DFF) : const Color(0xff700095),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: ResponsiveUtility.fontSize(8),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         ),

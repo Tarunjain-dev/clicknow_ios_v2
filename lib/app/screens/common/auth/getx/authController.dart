@@ -4,6 +4,7 @@ import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/professional/getx/professional_onboarding_storage.dart';
 import 'package:clicknow_version2/app/services/rbac_service.dart';
 import 'package:clicknow_version2/app/services/recaptcha_service.dart';
+import 'package:clicknow_version2/app/services/notifications/fcm_notification_service.dart';
 import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -42,6 +43,8 @@ class AuthController extends GetxController {
 
   final showOtp = false.obs;
   final secondsLeft = 0.obs;
+  final failedOtpAttempts = 0.obs;
+  final otpLockSecondsLeft = 0.obs;
   final isLoading = false.obs;
   final isGuestUser = false.obs;
   final userRole = 'customer'.obs;
@@ -54,8 +57,12 @@ class AuthController extends GetxController {
   final loginIntent = RbacDecision.roleCustomer.obs;
 
   bool get isPhoneFieldLocked => showOtp.value;
+  bool get isOtpLocked => otpLockSecondsLeft.value > 0;
+  String get resendCountdown => _formatCountdown(secondsLeft.value);
+  String get otpLockCountdown => _formatCountdown(otpLockSecondsLeft.value);
 
   Timer? _resendTimer;
+  Timer? _otpLockTimer;
   String? _verificationId;
   int? _resendToken;
   ConfirmationResult? _confirmationResult;
@@ -212,7 +219,10 @@ class AuthController extends GetxController {
 
   void clearAuthInputFields({bool clearPhone = true}) {
     _resendTimer?.cancel();
+    _otpLockTimer?.cancel();
     secondsLeft.value = 0;
+    failedOtpAttempts.value = 0;
+    otpLockSecondsLeft.value = 0;
     _verificationId = null;
     _resendToken = null;
     if (clearPhone) {
@@ -263,6 +273,7 @@ class AuthController extends GetxController {
     _storage.write('userRole', 'guest');
     _storage.write(customerProfileCompletedStorageKey, false);
     if (_auth.currentUser != null) {
+      await FcmNotificationService.instance.deactivateLastToken();
       await _auth.signOut();
     }
     Get.offAllNamed(AppRoutes.customerBottomNavigationRoute);
@@ -390,7 +401,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> resendOtp() async {
-    if (secondsLeft.value > 0) return;
+    if (secondsLeft.value > 0 || isOtpLocked || isLoading.value) return;
     _setLoginIntent(RbacDecision.roleCustomer);
 
     final phone = phoneController.text.trim();
@@ -446,6 +457,9 @@ class AuthController extends GetxController {
   }
 
   Future<void> verifyOtp() async {
+    if (isOtpLocked || isLoading.value) {
+      return;
+    }
     final smsCode = otpControllers.map((c) => c.text.trim()).join();
     if (smsCode.length != 6) {
       AppSnackbar.error("Invalid OTP", "Please enter the 6 digit OTP.");
@@ -470,6 +484,7 @@ class AuthController extends GetxController {
           preResolvedDecision: _otpRoleDecision,
         );
       } on FirebaseAuthException catch (e) {
+        _recordOtpFailure(e);
         AppSnackbar.error(
           "Verification Failed",
           e.message ?? "Unable to verify OTP.",
@@ -499,6 +514,7 @@ class AuthController extends GetxController {
         preResolvedDecision: _otpRoleDecision,
       );
     } on FirebaseAuthException catch (e) {
+      _recordOtpFailure(e);
       AppSnackbar.error(
         "Verification Failed",
         e.message ?? "Unable to verify OTP.",
@@ -681,6 +697,7 @@ class AuthController extends GetxController {
         preResolvedDecision: preResolvedDecision,
       );
     } on FirebaseAuthException catch (e) {
+      _recordOtpFailure(e);
       AppSnackbar.error("Login Failed", e.message ?? "Unable to sign in.");
     } catch (_) {
       AppSnackbar.error("Login Failed", "Unable to sign in.");
@@ -698,6 +715,9 @@ class AuthController extends GetxController {
     }
 
     _setGuestMode(false);
+    failedOtpAttempts.value = 0;
+    otpLockSecondsLeft.value = 0;
+    _otpLockTimer?.cancel();
     final decision = await _resolveDecisionAfterLogin(
       user.uid,
       phoneNumber: phoneNumber,
@@ -879,7 +899,7 @@ class AuthController extends GetxController {
     await doc.set(data, SetOptions(merge: true));
   }
 
-  void _startResendTimer({int seconds = 30}) {
+  void _startResendTimer({int seconds = 120}) {
     _resendTimer?.cancel();
     secondsLeft.value = seconds;
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -890,6 +910,41 @@ class AuthController extends GetxController {
         secondsLeft.value--;
       }
     });
+  }
+
+  void _recordOtpFailure(FirebaseAuthException error) {
+    if (!const {
+      'invalid-verification-code',
+      'invalid-verification-id',
+      'session-expired',
+    }.contains(error.code)) {
+      return;
+    }
+    failedOtpAttempts.value++;
+    if (failedOtpAttempts.value < 5) {
+      return;
+    }
+    _otpLockTimer?.cancel();
+    otpLockSecondsLeft.value = 600;
+    _otpLockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (otpLockSecondsLeft.value <= 1) {
+        timer.cancel();
+        otpLockSecondsLeft.value = 0;
+        failedOtpAttempts.value = 0;
+      } else {
+        otpLockSecondsLeft.value--;
+      }
+    });
+    AppSnackbar.error(
+      'OTP Locked',
+      'Too many incorrect attempts. Please try again after 10 minutes.',
+    );
+  }
+
+  String _formatCountdown(int seconds) {
+    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+    final remainder = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$remainder';
   }
 
   void _clearOtpFields() {
@@ -996,6 +1051,7 @@ class AuthController extends GetxController {
       node.dispose();
     }
     _resendTimer?.cancel();
+    _otpLockTimer?.cancel();
     super.onClose();
   }
 }

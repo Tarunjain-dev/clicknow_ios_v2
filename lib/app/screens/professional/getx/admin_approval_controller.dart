@@ -25,8 +25,6 @@ class AdminApprovalController extends GetxController {
   final isRefreshing = false.obs;
   final statusLabel = 'Under Review'.obs;
   final adminComment = ''.obs;
-  final reuploadReason = ''.obs;
-  final reuploadRequestedDocuments = <String>[].obs;
   final lastCheckedAt = Rxn<DateTime>();
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _sub;
@@ -129,15 +127,6 @@ class AdminApprovalController extends GetxController {
     } else {
       adminComment.value = (data?['reviewComment'] ?? '').toString().trim();
     }
-    reuploadReason.value = (data?['reuploadReason'] ?? '').toString().trim();
-    final requested = data?['reuploadRequestedDocuments'];
-    reuploadRequestedDocuments.assignAll(
-      requested is List
-          ? requested
-                .map((item) => item.toString().trim())
-                .where((item) => item.isNotEmpty)
-          : const <String>[],
-    );
     lastCheckedAt.value = DateTime.now();
 
     if (status == 'approved') {
@@ -146,7 +135,9 @@ class AdminApprovalController extends GetxController {
     }
     _approvalFlowInProgress = false;
 
-    if (status == 'under_review' || status == 'pending') {
+    if (status == 'under_review' ||
+        status == 'pending' ||
+        status == 'reupload_requested') {
       currentStage.value = ApplicationStage.underReview;
       statusLabel.value = 'Under Review';
       return;
@@ -161,12 +152,6 @@ class AdminApprovalController extends GetxController {
     if (status == 'phone_verified') {
       currentStage.value = ApplicationStage.phoneVerified;
       statusLabel.value = 'Phone Verified';
-      return;
-    }
-
-    if (status == 'reupload_requested') {
-      currentStage.value = ApplicationStage.underReview;
-      statusLabel.value = 'Document Re-upload Requested';
       return;
     }
 

@@ -249,10 +249,18 @@ class _StepOneBodyScreenState extends State<StepOneBodyScreen> with CodeAutoFill
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 SizedBox(height: ResponsiveUtility.height(6)),
+                                Text(
+                                  "OTP sent to +91 ${professionalRegController.phoneController.text}",
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white70 : Colors.black54,
+                                  ),
+                                ),
+                                SizedBox(height: ResponsiveUtility.height(6)),
                                 Text("Enter OTP", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),),
                                 SizedBox(height: ResponsiveUtility.height(10)),
                                 TextFormField(
                                   controller: professionalRegController.otpController,
+                                  enabled: !professionalRegController.isOtpLocked,
                                   autofillHints: const [
                                     AutofillHints.oneTimeCode,
                                   ],
@@ -302,7 +310,7 @@ class _StepOneBodyScreenState extends State<StepOneBodyScreen> with CodeAutoFill
                                     height: ResponsiveUtility.height(30),
                                     child: TextButton(
                                       onPressed: professionalRegController.isLoading.value ? null : ()=> professionalRegController.enablePhoneNumberEdit(),
-                                      child: const Text("Change Number", style: TextStyle(color: Color(0xffBF00FF), fontWeight: FontWeight.w600,),),
+                                      child: const Text("Change Phone Number", style: TextStyle(color: Color(0xffBF00FF), fontWeight: FontWeight.w600,),),
                                     ),
                                   ),
                                 ),
@@ -311,7 +319,11 @@ class _StepOneBodyScreenState extends State<StepOneBodyScreen> with CodeAutoFill
                                   height: ResponsiveUtility.height(40),
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: professionalRegController.isLoading.value ? null : professionalRegController.verifyOtp,
+                                    onPressed:
+                                        professionalRegController.isLoading.value ||
+                                            professionalRegController.isOtpLocked
+                                        ? null
+                                        : professionalRegController.verifyOtp,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
                                       shape: RoundedRectangleBorder(
@@ -333,12 +345,21 @@ class _StepOneBodyScreenState extends State<StepOneBodyScreen> with CodeAutoFill
 
                                 SizedBox(height: ResponsiveUtility.height(2),),
 
-                                Center(
+                                if (professionalRegController.isOtpLocked)
+                                  Center(
+                                    child: Text(
+                                      "Too many incorrect attempts. Try again in ${professionalRegController.otpLockCountdown}",
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.red),
+                                    ),
+                                  )
+                                else
+                                  Center(
                                   child: professionalRegController.canResendOtp.value ?
                                   SizedBox(
                                     height: ResponsiveUtility.height(30),
                                       child: TextButton(onPressed: professionalRegController.resendOtp, child: Text("Resend OTP", style: TextStyle(color: Color(0xffBF00FF)),),)):
-                                  Text("Resend OTP in ${professionalRegController.secondsRemaining.value}s", style: TextStyle(color: Colors.black.withValues(alpha: 0.8)),),),
+                                  Text("Resend OTP in ${professionalRegController.resendCountdown}", style: TextStyle(color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.8)),),),
                               ],
                             );
                           }

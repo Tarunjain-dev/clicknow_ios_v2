@@ -2,21 +2,25 @@
 
 import 'dart:async';
 
+import 'package:clicknow_version2/app/services/payments/razorpay_payment_service.dart';
 import 'package:clicknow_version2/app/services/service_catalog_paths.dart';
+import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
 class ProfessionalEarningsMonthlyOverview {
   const ProfessionalEarningsMonthlyOverview({
+    required this.year,
     required this.month,
-    required this.revenue,
-    required this.payout,
+    required this.label,
+    required this.earnings,
   });
 
-  final String month;
-  final double revenue;
-  final double payout;
+  final int year;
+  final int month;
+  final String label;
+  final double earnings;
 }
 
 class ProfessionalPaymentHistoryItem {
@@ -34,6 +38,11 @@ class ProfessionalPaymentHistoryItem {
     required this.gstAmount,
     required this.otherCharges,
     required this.stipendPdfUrl,
+    required this.professionalConfirmationStatus,
+    required this.professionalConfirmationComment,
+    required this.professionalDisputeReason,
+    required this.professionalConfirmedAt,
+    required this.professionalDisputedAt,
   });
 
   final String payrollId;
@@ -49,6 +58,11 @@ class ProfessionalPaymentHistoryItem {
   final int gstAmount;
   final int otherCharges;
   final String stipendPdfUrl;
+  final String professionalConfirmationStatus;
+  final String professionalConfirmationComment;
+  final String professionalDisputeReason;
+  final DateTime? professionalConfirmedAt;
+  final DateTime? professionalDisputedAt;
 }
 
 class ProfessionalEarningsController extends GetxController {
@@ -61,6 +75,8 @@ class ProfessionalEarningsController extends GetxController {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final RazorpayPaymentService _paymentService =
+      RazorpayPaymentService.instance;
 
   final RxBool isLoading = true.obs;
   final RxInt totalRevenue = 0.obs;
@@ -69,10 +85,36 @@ class ProfessionalEarningsController extends GetxController {
   final RxInt settledAmount = 0.obs;
   final RxList<ProfessionalEarningsMonthlyOverview> monthlyOverview =
       <ProfessionalEarningsMonthlyOverview>[].obs;
+  final Rx<DateTime> chartEndMonth =
+      DateTime(DateTime.now().year, DateTime.now().month).obs;
   final RxList<ProfessionalPaymentHistoryItem> paymentHistory =
       <ProfessionalPaymentHistoryItem>[].obs;
+  final RxSet<String> payoutActionsInProgress = <String>{}.obs;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _payrollSub;
+
+  void showPreviousChartMonths() {
+    chartEndMonth.value = DateTime(
+      chartEndMonth.value.year,
+      chartEndMonth.value.month - 12,
+    );
+    _recalculate(paymentHistory.toList(growable: false));
+  }
+
+  void showNextChartMonths() {
+    final current = DateTime(DateTime.now().year, DateTime.now().month);
+    final next = DateTime(
+      chartEndMonth.value.year,
+      chartEndMonth.value.month + 12,
+    );
+    chartEndMonth.value = next.isAfter(current) ? current : next;
+    _recalculate(paymentHistory.toList(growable: false));
+  }
+
+  bool get canShowNextChartMonths {
+    final current = DateTime(DateTime.now().year, DateTime.now().month);
+    return chartEndMonth.value.isBefore(current);
+  }
 
   @override
   void onInit() {
@@ -91,28 +133,40 @@ class ProfessionalEarningsController extends GetxController {
         .collection(ServiceCatalogPaths.payrollsCollection)
         .where('professionalId', isEqualTo: professionalId)
         .snapshots()
-        .listen((snapshot) {
-          final items = snapshot.docs.map(_historyItemFromDoc).toList();
-          items.sort((left, right) {
-            final a = left.eventDate ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final b = right.eventDate ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return b.compareTo(a);
-          });
-          paymentHistory.assignAll(items);
-          _recalculate(items);
-          isLoading.value = false;
-        }, onError: (_) {
-          isLoading.value = false;
-        });
+        .listen(
+          (snapshot) async {
+            final items = await Future.wait(
+              snapshot.docs.map(_historyItemFromDoc),
+            );
+            items.sort((left, right) {
+              final a =
+                  left.eventDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final b =
+                  right.eventDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return b.compareTo(a);
+            });
+            paymentHistory.assignAll(items);
+            _recalculate(items);
+            isLoading.value = false;
+          },
+          onError: (_) {
+            isLoading.value = false;
+          },
+        );
   }
 
   void _recalculate(List<ProfessionalPaymentHistoryItem> items) {
     final now = DateTime.now();
+    final releasedItems = items
+        .where((item) => item.status.toUpperCase() == 'RELEASED')
+        .toList(growable: false);
     totalRevenue.value = items.fold<int>(
       0,
-      (runningTotal, item) => runningTotal + item.bookingAmount,
+      (runningTotal, item) =>
+          runningTotal +
+          (item.status.toUpperCase() == 'RELEASED' ? item.netAmount : 0),
     );
-    monthlyRevenue.value = items
+    monthlyRevenue.value = releasedItems
         .where(
           (item) =>
               item.eventDate != null &&
@@ -121,7 +175,7 @@ class ProfessionalEarningsController extends GetxController {
         )
         .fold<int>(
           0,
-          (runningTotal, item) => runningTotal + item.bookingAmount,
+          (runningTotal, item) => runningTotal + item.netAmount,
         );
     pendingPayout.value = items
         .where((item) => item.status.toUpperCase() == 'PENDING')
@@ -130,35 +184,43 @@ class ProfessionalEarningsController extends GetxController {
         .where((item) => item.status.toUpperCase() == 'RELEASED')
         .fold<int>(0, (runningTotal, item) => runningTotal + item.netAmount);
 
-    final buckets = <String, (int revenue, int payout)>{};
-    for (final item in items) {
+    final buckets = _emptyMonthlyBuckets(chartEndMonth.value);
+    for (final item in releasedItems) {
       final date = item.eventDate;
       if (date == null) continue;
-      final key = _monthLabel(date.month);
-      final current = buckets[key] ?? (0, 0);
-      buckets[key] = (
-        current.$1 + item.bookingAmount,
-        current.$2 + (item.status.toUpperCase() == 'RELEASED' ? item.netAmount : 0),
+      final key = _monthKey(date);
+      if (!buckets.containsKey(key)) continue;
+      final current = buckets[key]!;
+      buckets[key] = ProfessionalEarningsMonthlyOverview(
+        year: current.year,
+        month: current.month,
+        label: current.label,
+        earnings: current.earnings + item.netAmount,
       );
     }
-    monthlyOverview.assignAll(
-      buckets.entries.map((entry) {
-        return ProfessionalEarningsMonthlyOverview(
-          month: entry.key,
-          revenue: entry.value.$1 / 1000,
-          payout: entry.value.$2 / 1000,
-        );
-      }).toList(growable: false),
-    );
+    monthlyOverview.assignAll(buckets.values.toList(growable: false));
   }
 
-  ProfessionalPaymentHistoryItem _historyItemFromDoc(
+  Future<ProfessionalPaymentHistoryItem> _historyItemFromDoc(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  ) async {
     final data = doc.data();
+    final bookingDocumentId = _string(data['bookingId']);
+    var bookingCode = _string(data['bookingCode']);
+    if (bookingCode.isEmpty && bookingDocumentId.isNotEmpty) {
+      try {
+        final bookingSnapshot = await _db
+            .collection(ServiceCatalogPaths.bookingsCollection)
+            .doc(bookingDocumentId)
+            .get();
+        bookingCode = _string(bookingSnapshot.data()?['bookingCode']);
+      } catch (_) {
+        bookingCode = '';
+      }
+    }
     return ProfessionalPaymentHistoryItem(
       payrollId: doc.id,
-      bookingId: _string(data['bookingId']),
+      bookingId: bookingCode.isEmpty ? bookingDocumentId : bookingCode,
       status: _string(data['payoutStatus']).isEmpty
           ? 'PENDING'
           : _string(data['payoutStatus']),
@@ -172,7 +234,46 @@ class ProfessionalEarningsController extends GetxController {
       gstAmount: _asInt(data['gstAmount']),
       otherCharges: _asInt(data['otherCharges']),
       stipendPdfUrl: _string(data['stipendPdfUrl']),
+      professionalConfirmationStatus: _confirmationStatus(
+        data['professionalConfirmationStatus'],
+        data,
+      ),
+      professionalConfirmationComment: _string(
+        data['professionalConfirmationComment'],
+      ),
+      professionalDisputeReason: _string(data['professionalDisputeReason']),
+      professionalConfirmedAt: _asDate(data['professionalConfirmedAt']),
+      professionalDisputedAt: _asDate(data['professionalDisputedAt']),
     );
+  }
+
+  Future<bool> submitPayoutConfirmation({
+    required String payrollId,
+    required String action,
+    String message = '',
+  }) async {
+    if (payoutActionsInProgress.contains(payrollId)) return false;
+    payoutActionsInProgress.add(payrollId);
+    try {
+      await _paymentService.confirmProfessionalPayout(
+        payrollId: payrollId,
+        action: action,
+        comment: action == 'CONFIRM' ? message : '',
+        reason: action == 'DISPUTE' ? message : '',
+      );
+      AppSnackbar.success(
+        action == 'CONFIRM' ? 'Payout Confirmed' : 'Issue Reported',
+        action == 'CONFIRM'
+            ? 'The payout receipt has been confirmed.'
+            : 'The payout issue has been sent to admin.',
+      );
+      return true;
+    } catch (error) {
+      AppSnackbar.error('Unable to update payout', error.toString());
+      return false;
+    } finally {
+      payoutActionsInProgress.remove(payrollId);
+    }
   }
 
   @override
@@ -180,6 +281,14 @@ class ProfessionalEarningsController extends GetxController {
     _payrollSub?.cancel();
     super.onClose();
   }
+}
+
+String _confirmationStatus(dynamic value, Map<String, dynamic> data) {
+  final status = _string(value).toUpperCase();
+  if (status.isNotEmpty) return status;
+  return _string(data['payoutStatus']).toUpperCase() == 'RELEASED'
+      ? 'PENDING'
+      : '';
 }
 
 String _string(dynamic value) => value?.toString().trim() ?? '';
@@ -223,4 +332,28 @@ String _monthLabel(int month) {
   ];
   if (month < 1 || month > 12) return '-';
   return labels[month];
+}
+
+String _monthKey(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}';
+
+String _monthYearLabel(DateTime date) {
+  final year = date.year.toString().substring(2);
+  return '${_monthLabel(date.month)} $year';
+}
+
+Map<String, ProfessionalEarningsMonthlyOverview> _emptyMonthlyBuckets(
+  DateTime endMonth,
+) {
+  final buckets = <String, ProfessionalEarningsMonthlyOverview>{};
+  for (var index = 11; index >= 0; index--) {
+    final date = DateTime(endMonth.year, endMonth.month - index);
+    buckets[_monthKey(date)] = ProfessionalEarningsMonthlyOverview(
+      year: date.year,
+      month: date.month,
+      label: _monthYearLabel(date),
+      earnings: 0,
+    );
+  }
+  return buckets;
 }

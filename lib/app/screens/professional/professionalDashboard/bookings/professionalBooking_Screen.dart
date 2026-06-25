@@ -275,14 +275,14 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                     style: TextStyle(
                       color: isDark ? Colors.white : Colors.black,
                       fontWeight: FontWeight.w600,
-                      fontSize: scale.getScaledFont(17),
+                      fontSize: scale.getScaledFont(14),
                     ),
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale.getScaledWidth(12),
-                    vertical: scale.getScaledHeight(4),
+                    horizontal: scale.getScaledWidth(10),
+                    vertical: scale.getScaledHeight(2),
                   ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
@@ -308,7 +308,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
               style: TextStyle(
                 color: isDark ? Color(0xFF2ED669) : Color(0xFF00A63E),
                 fontWeight: FontWeight.w600,
-                fontSize: scale.getScaledFont(14),
+                fontSize: scale.getScaledFont(12),
               ),
             ),
           ),
@@ -318,13 +318,10 @@ class ProfessionalBookingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _point(scale, 'Event : ${item.eventName}', isDark),
-                _point(
-                  scale,
-                  'Professional type : ${item.professionalType}',
-                  isDark,
-                ),
-                _point(scale, 'Location : ${item.location}', isDark),
+                _point(scale, 'Event type : ${item.eventName}', isDark),
+                _point(scale, 'Price plan: ${item.professionalType}', isDark),
+                _point(scale, 'Venue : ${item.venueName.isEmpty ? 'Not provided' : item.venueName}', isDark,),
+                _point(scale, 'Venue Location : ${item.location}', isDark),
                 _point(scale, 'Date & Time : ${item.dateAndTime}', isDark),
               ],
             ),
@@ -353,7 +350,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                           ? Colors.white.withValues(alpha: 0.95)
                           : Colors.black.withValues(alpha: 0.95),
                       fontWeight: FontWeight.w600,
-                      fontSize: scale.getScaledFont(16),
+                      fontSize: scale.getScaledFont(12),
                     ),
                   ),
                 ),

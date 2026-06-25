@@ -239,7 +239,7 @@ class _StepFiveBodyScreenState extends State<StepFiveBodyScreen> {
                           ),
                           SizedBox(height: ResponsiveUtility.height(10)),
                           Text(
-                            "${controller.uploadProgress.value * 100}% Uploaded...",
+                            "${(controller.uploadProgress.value * 100).toInt()}% Uploaded...",
                             style: TextStyle(
                               color: const Color(0xffFB9F00),
                               fontSize: ResponsiveUtility.fontSize(14),
@@ -359,10 +359,6 @@ class _StepFiveBodyScreenState extends State<StepFiveBodyScreen> {
             children: questions.map((question) => _serviceQuestionField(question)).toList(),
           );
         }),
-        _toggleTile(
-          "Available for urgent bookings",
-          controller.urgentAvailable,
-        ),
         _toggleTile(
           "Willing to travel outside city",
           controller.willingToTravel,
@@ -702,7 +698,27 @@ class _StepFiveBodyScreenState extends State<StepFiveBodyScreen> {
       children: [
         Text("Account Number", style: TextStyle(color: _textPrimary)),
         SizedBox(height: ResponsiveUtility.height(8)),
-        _textField(controller.accountNumberController, "Enter account number"),
+        TextFormField(
+          controller: controller.accountNumberController,
+          keyboardType: TextInputType.number,
+          maxLength: 18,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: TextStyle(color: _textPrimary),
+          decoration: _inputDecoration("Enter account number").copyWith(
+            counterText: '',
+          ),
+          validator: (value) {
+            final account = value?.trim() ?? '';
+            if (account.isEmpty) return 'Account number is required.';
+            if (!RegExp(r'^[0-9]+$').hasMatch(account)) {
+              return 'Account number must contain digits only.';
+            }
+            if (account.length < 9 || account.length > 18) {
+              return 'Account number must be between 9 and 18 digits.';
+            }
+            return null;
+          },
+        ),
         SizedBox(height: ResponsiveUtility.height(12)),
         Text("Upload Bank Passbook", style: TextStyle(color: _textPrimary),),
         SizedBox(height: ResponsiveUtility.height(8)),

@@ -28,6 +28,9 @@ class ProfessionalBookingItem {
     required this.customerName,
     required this.customerPhone,
     required this.location,
+    required this.venueName,
+    required this.venueHouseDetails,
+    required this.venueLandmarkDetails,
     required this.dateAndTime,
     required this.specialInstructions,
     required this.ratePerHour,
@@ -61,6 +64,9 @@ class ProfessionalBookingItem {
   final String customerName;
   final String customerPhone;
   final String location;
+  final String venueName;
+  final String venueHouseDetails;
+  final String venueLandmarkDetails;
   final String dateAndTime;
   final String specialInstructions;
   final int ratePerHour;
@@ -116,6 +122,9 @@ class ProfessionalBookingItem {
       customerName: record.customerName,
       customerPhone: record.customerPhone,
       location: record.locationText,
+      venueName: record.venueName,
+      venueHouseDetails: record.venueHouseDetails,
+      venueLandmarkDetails: record.venueLandmarkDetails,
       dateAndTime: dateLabel,
       specialInstructions: record.specialRequirements,
       ratePerHour: record.basePrice,

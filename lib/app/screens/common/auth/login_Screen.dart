@@ -172,6 +172,7 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
       child: TextField(
         controller: controller.otpControllers[index],
         focusNode: controller.otpFocusNodes[index],
+        enabled: !controller.isOtpLocked,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         inputFormatters: [
@@ -303,6 +304,18 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
                 child: showOtp ? Column(
                   children: [
                     SizedBox(height: ResponsiveUtility.height(20)),
+                    Text(
+                      'OTP sent to +91 ${controller.phoneController.text}',
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: controller.isLoading.value
+                          ? null
+                          : controller.editPhoneNumberForOtp,
+                      child: const Text('Change Phone Number'),
+                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) => buildOtpBox(index, isDark: isDark),),
@@ -312,13 +325,38 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
                       width: double.infinity,
                       height: ResponsiveUtility.height(50),
                       child: ElevatedButton(
-                        onPressed: controller.isLoading.value ? null : controller.verifyOtp,
+                        onPressed:
+                            controller.isLoading.value || controller.isOtpLocked
+                            ? null
+                            : controller.verifyOtp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryColor,
                         ),
                         child: controller.isLoading.value ? CircularProgressIndicator(color: AppColors.white, strokeWidth: 2,): const Text("Verify OTP", style: TextStyle(color: Colors.white,),),
                       ),
-                    )
+                    ),
+                    if (controller.isOtpLocked)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          'Too many incorrect attempts. Try again in ${controller.otpLockCountdown}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      )
+                    else
+                      TextButton(
+                        onPressed:
+                            controller.secondsLeft.value == 0 &&
+                                !controller.isLoading.value
+                            ? controller.resendOtp
+                            : null,
+                        child: Text(
+                          controller.secondsLeft.value == 0
+                              ? 'Resend OTP'
+                              : 'Resend OTP in ${controller.resendCountdown}',
+                        ),
+                      ),
                   ],
                 ) : const SizedBox(),
               )

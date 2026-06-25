@@ -64,10 +64,10 @@ class ProfessionalEarningsScreen extends StatelessWidget {
                           mainAxisSpacing: ResponsiveUtility.height(8),
                           childAspectRatio: 2.2,
                           children: [
-                            _summaryCard(scale: scale, title: 'Total Revenue.', value: controller.totalRevenue.value, isDark: isDark),
-                            _summaryCard(scale: scale, title: 'This Monthly Revenue.', value: controller.monthlyRevenue.value, isDark: isDark),
+                            _summaryCard(scale: scale, title: 'Net earnings', value: controller.totalRevenue.value, isDark: isDark),
+                            _summaryCard(scale: scale, title: 'Monthly earnings', value: controller.monthlyRevenue.value, isDark: isDark),
                             _summaryCard(scale: scale, title: 'Pending Payout.', value: controller.pendingPayout.value, isDark: isDark),
-                            _summaryCard(scale: scale, title: 'Settled Amount.', value: controller.settledAmount.value, isDark: isDark),
+                            _summaryCard(scale: scale, title: 'Settled Payout.', value: controller.settledAmount.value, isDark: isDark),
                           ],
                         ),
                       ),
@@ -150,12 +150,16 @@ class ProfessionalEarningsScreen extends StatelessWidget {
           const Spacer(),
           Row(
             children: [
-              Text(
-                _formatCurrency(value),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                  fontSize: ResponsiveUtility.fontSize(22),
+              Flexible(
+                child: Text(
+                  _formatCurrency(value),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w600,
+                    fontSize: ResponsiveUtility.fontSize(22),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               SizedBox(width: scale.getScaledWidth(4)),
@@ -179,6 +183,13 @@ class ProfessionalEarningsScreen extends StatelessWidget {
     ProfessionalEarningsController controller,
     bool isDark,
   ) {
+    final chartData = controller.monthlyOverview.toList(growable: false);
+    final maxValue = chartData.fold<double>(
+      0,
+      (current, item) => item.earnings > current ? item.earnings : current,
+    );
+    final axisMax = _niceAxisMax(maxValue);
+    final axisInterval = _niceAxisInterval(axisMax);
     return Container(
       width: double.infinity,
       padding: ResponsiveUtility.only(bottom: 10, top: 10, right:10, left: 10),
@@ -192,13 +203,41 @@ class ProfessionalEarningsScreen extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: scale.getScaledWidth(4)),
-            child: Text(
-              'Monthly Overview',
-              style: TextStyle(
-                color: isDark ? Colors.white.withValues(alpha: 0.86) : Colors.black.withValues(alpha: 1),
-                fontSize: ResponsiveUtility.fontSize(16),
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '12-month earnings overview',
+                    style: TextStyle(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.86)
+                          : Colors.black.withValues(alpha: 1),
+                      fontSize: ResponsiveUtility.fontSize(16),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Previous months',
+                  onPressed: controller.showPreviousChartMonths,
+                  icon: Icon(
+                    Icons.chevron_left_rounded,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Next months',
+                  onPressed: controller.canShowNextChartMonths
+                      ? controller.showNextChartMonths
+                      : null,
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: controller.canShowNextChartMonths
+                        ? (isDark ? Colors.white : Colors.black)
+                        : Colors.grey,
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: ResponsiveUtility.height(8)),
@@ -207,7 +246,7 @@ class ProfessionalEarningsScreen extends StatelessWidget {
             child: SfCartesianChart(
               margin: ResponsiveUtility.only(left: 8, top: 8, bottom: 0, right:8),
               legend: Legend(
-                isVisible: true,
+                isVisible: false,
                 position: LegendPosition.bottom,
                 iconHeight: ResponsiveUtility.height(10),
                 iconWidth: ResponsiveUtility.width(10),
@@ -232,8 +271,9 @@ class ProfessionalEarningsScreen extends StatelessWidget {
               ),
               primaryYAxis: NumericAxis(
                 minimum: 0,
-                maximum: 100,
-                interval: 20,
+                maximum: axisMax,
+                interval: axisInterval,
+                labelFormat: 'Rs.{value}',
                 axisLine: AxisLine(width: ResponsiveUtility.width(1), color: isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.4)),
                 majorTickLines: MajorTickLines(size: ResponsiveUtility.width(1)),
                 majorGridLines: MajorGridLines(
@@ -248,22 +288,13 @@ class ProfessionalEarningsScreen extends StatelessWidget {
               ),
               series: <CartesianSeries<ProfessionalEarningsMonthlyOverview, String>>[
                 ColumnSeries<ProfessionalEarningsMonthlyOverview, String>(
-                  name: 'Revenue',
-                  dataSource: controller.monthlyOverview.toList(),
-                  xValueMapper: (item, _) => item.month,
-                  yValueMapper: (item, _) => item.revenue,
+                  name: 'Monthly Earnings',
+                  dataSource: chartData,
+                  xValueMapper: (item, _) => item.label,
+                  yValueMapper: (item, _) => item.earnings,
                   color: isDark ? Color(0xFF6C7CFF) : Color(0xff0029FF),
-                  width: 0.28,
-                  spacing: 0.2,
-                ),
-                ColumnSeries<ProfessionalEarningsMonthlyOverview, String>(
-                  name: 'Payout',
-                  dataSource: controller.monthlyOverview.toList(),
-                  xValueMapper: (item, _) => item.month,
-                  yValueMapper: (item, _) => item.payout,
-                  color: isDark ? Color(0xFF79CAA3) : Color(0xff00E458),
-                  width: 0.28,
-                  spacing: 0.2,
+                  width: 0.48,
+                  spacing: 0.12,
                 ),
               ],
             ),
@@ -275,5 +306,36 @@ class ProfessionalEarningsScreen extends StatelessWidget {
 
   String _formatCurrency(int value) {
     return NumberFormat.decimalPattern('en_IN').format(value);
+  }
+
+  double _niceAxisMax(double value) {
+    if (value <= 0) return 1000;
+    final roughMax = value * 1.15;
+    final magnitude = _pow10(roughMax);
+    final normalized = roughMax / magnitude;
+    final rounded = normalized <= 1
+        ? 1
+        : normalized <= 2
+        ? 2
+        : normalized <= 5
+        ? 5
+        : 10;
+    return (rounded * magnitude).toDouble();
+  }
+
+  double _niceAxisInterval(double axisMax) {
+    if (axisMax <= 0) return 200;
+    return axisMax / 5;
+  }
+
+  double _pow10(double value) {
+    var magnitude = 1.0;
+    while (magnitude * 10 <= value) {
+      magnitude *= 10;
+    }
+    while (value < magnitude && magnitude > 1) {
+      magnitude /= 10;
+    }
+    return magnitude;
   }
 }

@@ -9,6 +9,7 @@ import 'package:clicknow_version2/app/screens/admin/services/admin_services_scre
 import 'package:clicknow_version2/app/screens/admin/customers/admin_customers_screen.dart';
 import 'package:clicknow_version2/app/screens/admin/bookings/admin_bookings_screen.dart';
 import 'package:clicknow_version2/app/screens/admin/payments/admin_payments_screen.dart';
+import 'package:clicknow_version2/app/screens/admin/notifications/admin_notifications_screen.dart';
 import 'package:clicknow_version2/app/screens/admin/content_portfolio/admin_content_portfolio_screen.dart';
 import 'package:clicknow_version2/app/screens/admin/settings/admin_settings_screen.dart';
 import 'package:clicknow_version2/app/screens/admin/support/admin_support_disputes_screen.dart';
@@ -37,6 +38,7 @@ class AppRoutes {
   static const String adminBookingsRoute = "/adminBookings";
   static const String adminServicesRoute = "/adminServices";
   static const String adminPaymentsRoute = "/adminPayments";
+  static const String adminNotificationsRoute = "/adminNotifications";
   static const String adminContentPortfolioRoute = "/adminContentPortfolio";
   static const String adminSettingsRoute = "/adminSettings";
   static const String adminSupportDisputesRoute = "/adminSupportDisputes";
@@ -117,6 +119,11 @@ class AppRoutes {
     GetPage(
       name: adminPaymentsRoute,
       page: () => const AdminPaymentsScreen(),
+      middlewares: [AdminMiddleware()],
+    ),
+    GetPage(
+      name: adminNotificationsRoute,
+      page: () => const AdminNotificationsScreen(),
       middlewares: [AdminMiddleware()],
     ),
     GetPage(

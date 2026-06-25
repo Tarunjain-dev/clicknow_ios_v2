@@ -1,5 +1,6 @@
 import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,20 +13,14 @@ class AdminDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     final items = _drawerItems();
-    final drawerWidth = MediaQuery.of(context).size.width * 0.78;
 
     return Drawer(
-      width: drawerWidth,
+      width: ResponsiveUtility.width(300),
       backgroundColor: Colors.transparent,
       child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xff1A0A2F), Color(0xff120621), Color(0xff0B0616)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: Colors.white,
         child: SafeArea(
           child: Column(
             children: [
@@ -33,13 +28,12 @@ class AdminDrawer extends StatelessWidget {
               Expanded(
                 child: ListView.separated(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale.getScaledWidth(16),
-                    vertical: scale.getScaledHeight(8),
+                    horizontal: ResponsiveUtility.width(16),
+                    vertical: ResponsiveUtility.height(8),
                   ),
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    final isActive =
-                        item.route != null && item.route == activeRoute;
+                    final isActive = item.route != null && item.route == activeRoute;
                     return ListTile(
                       onTap: () {
                         Get.back();
@@ -49,51 +43,39 @@ class AdminDrawer extends StatelessWidget {
                         }
                         Future.microtask(() => Get.offNamed(route));
                       },
-                      tileColor: isActive
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : Colors.transparent,
+                      tileColor: isActive ? Colors.black.withValues(alpha: 0.08) : Colors.transparent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: scale.getScaledWidth(6),
-                      ),
+                      contentPadding: ResponsiveUtility.symmetric(horizontal: 10),
                       leading: Icon(
                         item.icon,
-                        color: isActive
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.85),
-                        size: scale.getScaledWidth(18),
+                        color: isActive ? AppColors.primaryColor : Colors.black.withValues(alpha: 0.4),
+                        size: ResponsiveUtility.height(18),
                       ),
                       title: Text(
                         item.label,
                         style: TextStyle(
-                          color: isActive
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.9),
-                          fontSize: scale.getScaledFont(13),
-                          fontWeight: isActive
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          color: isActive ? AppColors.primaryColor : Colors.black.withValues(alpha: 0.4),
+                          fontSize: ResponsiveUtility.fontSize(14),
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                       trailing: Icon(
                         Icons.chevron_right,
-                        color: isActive
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.4),
-                        size: scale.getScaledWidth(18),
+                        color: isActive ? AppColors.primaryColor : Colors.black.withValues(alpha: 0.4),
+                        size: ResponsiveUtility.height(18),
                       ),
                     );
                   },
                   separatorBuilder: (context, index) => Divider(
-                    height: scale.getScaledHeight(8),
-                    color: Colors.white.withValues(alpha: 0.08),
+                    height: ResponsiveUtility.height(10),
+                    color: Colors.black.withValues(alpha: 0.08),
                   ),
                   itemCount: items.length,
                 ),
               ),
-              SizedBox(height: scale.getScaledHeight(12)),
+              SizedBox(height: ResponsiveUtility.height(10)),
             ],
           ),
         ),
@@ -103,55 +85,45 @@ class AdminDrawer extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: scale.getScaledWidth(16),
-        vertical: scale.getScaledHeight(16),
-      ),
+      padding: ResponsiveUtility.all(16),
       child: Row(
         children: [
           Container(
-            height: scale.getScaledHeight(46),
-            width: scale.getScaledWidth(46),
+            height: ResponsiveUtility.height(46),
+            width: ResponsiveUtility.width(46),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: AppColors.primaryColor,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: Text(
                 "CN",
                 style: TextStyle(
-                  color: AppColors.purple3,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: scale.getScaledFont(18),
+                  fontSize: ResponsiveUtility.fontSize(18),
                 ),
               ),
             ),
           ),
-          SizedBox(width: scale.getScaledWidth(12)),
+          SizedBox(width: ResponsiveUtility.width(12)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 "ClickNow",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.primaryColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: scale.getScaledFont(18),
+                  fontSize: ResponsiveUtility.height(18),
                 ),
               ),
-              SizedBox(height: scale.getScaledHeight(2)),
+              SizedBox(height: ResponsiveUtility.height(2)),
               Text(
                 "Admins",
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: scale.getScaledFont(12),
+                  color: Colors.black.withValues(alpha: 0.7),
+                  fontSize: ResponsiveUtility.fontSize(12),
                 ),
               ),
             ],
@@ -198,7 +170,11 @@ class AdminDrawer extends StatelessWidget {
         icon: Icons.support_agent,
         route: AppRoutes.adminSupportDisputesRoute,
       ),
-      _DrawerItem(label: "Reports & Analytics", icon: Icons.query_stats),
+      _DrawerItem(
+        label: "Notifications",
+        icon: Icons.notifications_active_outlined,
+        route: AppRoutes.adminNotificationsRoute,
+      ),
       _DrawerItem(
         label: "Content & Portfolio",
         icon: Icons.photo_library_outlined,

@@ -10,24 +10,25 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:clicknow_version2/app/services/network_guard_controller.dart';
+import 'package:clicknow_version2/app/services/notifications/fcm_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
 
 void main() async {
   /// -- Firebase Integration
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-    DeviceOrientation.portraitUp,]);
+  await SystemChrome.setPreferredOrientations(<DeviceOrientation>[DeviceOrientation.portraitUp,]);
   await HelperFunctions.setStatusBarColor(color: Colors.white);
   await GetStorage.init();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  const forceDebugAppCheck = bool.fromEnvironment(
-    'USE_APPCHECK_DEBUG',
-    defaultValue: false,
-  );
-  const allowReleaseDebugFallback = bool.fromEnvironment(
-    'ALLOW_APPCHECK_RELEASE_DEBUG_FALLBACK',
-    defaultValue: false,
-  );
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  const forceDebugAppCheck = bool.fromEnvironment('USE_APPCHECK_DEBUG', defaultValue: false,);
+  const allowReleaseDebugFallback = bool.fromEnvironment('ALLOW_APPCHECK_RELEASE_DEBUG_FALLBACK', defaultValue: false,);
   try {
     await FirebaseAppCheck.instance.activate(
       providerAndroid: (kReleaseMode && !forceDebugAppCheck)
@@ -57,7 +58,7 @@ void main() async {
     }
   }
   NetworkGuardController.instance;
-
+  await FcmNotificationService.instance.initialize();
   runApp(const MyApp());
 }
 

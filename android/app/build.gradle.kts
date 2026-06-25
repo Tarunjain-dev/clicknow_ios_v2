@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -8,11 +11,19 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 fun resolveGoogleMapsApiKey(): String {
     val apiConstantsFile = rootProject.file("../lib/app/utils/device_constants/apiConstants.dart")
     if (!apiConstantsFile.exists()) {
         return ""
     }
+
     val fileContent = apiConstantsFile.readText()
     val match = Regex("""googleMapsApiKey\s*=\s*['"]([^'"]+)['"]""").find(fileContent)
     return match?.groupValues?.getOrNull(1)?.trim().orEmpty()
@@ -21,7 +32,7 @@ fun resolveGoogleMapsApiKey(): String {
 val googleMapsApiKey: String = resolveGoogleMapsApiKey()
 
 android {
-    namespace = "com.example.clicknow_version2"
+    namespace = "com.clicknow.clicknow_version2"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -35,22 +46,27 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.clicknow_version2"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.clicknow.clicknow_version2"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
         manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = file(keystoreProperties.getProperty("storeFile"))
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
