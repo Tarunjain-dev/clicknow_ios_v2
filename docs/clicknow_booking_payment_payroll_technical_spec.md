@@ -1,0 +1,1372 @@
+# ClickNow Booking, Payment, Refund, and Payout System Audit
+
+Version: 2.0  
+Audit date: 2026-06-12  
+Status: Current implementation audit and target business-logic specification  
+Scope: Customer, professional, admin, Flutter frontend, Cloud Functions, and Firestore data  
+
+## 1. Purpose
+
+This document explains how ClickNow's booking, payment, coupon, refund, invoice, payroll, payout, and generated-ID logic currently works.
+
+It also identifies why the frontend shows incorrect or misleading values, why backend records can become inconsistent, and what the corrected system must do.
+
+This is an analysis and implementation-planning document. No application logic was changed as part of this audit.
+
+## 2. Executive Summary
+
+The current system does not have one authoritative booking and finance workflow.
+
+There are two competing business-logic engines:
+
+1. Flutter services directly create and update booking, refund, invoice, payroll, and payout records in Firestore.
+2. Cloud Functions independently calculate and update payment, refund, completion, invoice, and payroll records.
+
+At the same time, booking data is copied into several collections. Different panels read different copies:
+
+- the customer often reads customer booking mirrors
+- the admin reads `customer_booking_requests`
+- the professional generally reads canonical `bookings`
+- the customer dashboard merges as many as seven booking queries
+
+This creates four major failure classes:
+
+- stale or contradictory booking statuses between panels
+- different financial calculations for the same booking
+- customer, professional, and admin screens showing the wrong financial meaning
+- direct client-side finance mutations bypassing backend authorization and transaction guarantees
+
+The Cloud Functions backend is also currently blocked by a syntax error in `functions/index.js`, and its planned human-ID helper is called but not implemented.
+
+The correction must establish:
+
+- one canonical booking document
+- one backend-owned financial calculation
+- backend-only lifecycle and money mutations
+- panel-specific read models
+- immutable financial snapshots
+- centrally generated business IDs
+- reconciliation and migration of existing records
+
+## 3. Intended Business Rules
+
+The intended rules below are based on the supplied ClickNow booking and payment refactor requirements.
+
+### 3.1 Backend Ownership
+
+The backend must be the single source of truth for:
+
+- service price validation
+- coupon validation and application
+- GST calculation
+- final customer payable amount
+- advance amount
+- remaining amount
+- payment verification
+- refund eligibility and refund amount
+- platform commission
+- professional payout
+- invoice creation
+- payroll creation
+- business ID generation
+
+The frontend must display backend values. It must not independently calculate or persist authoritative finance values.
+
+### 3.2 Canonical Pricing Formula
+
+Example:
+
+- rate per hour: `2500`
+- duration: `2`
+- service net amount: `5000`
+- GST at 18%: `900`
+- original customer payable: `5900`
+
+With a 20% coupon:
+
+- discount on service net amount: `1000`
+- discounted service net amount: `4000`
+- recalculated GST at 18%: `720`
+- final customer payable: `4720`
+
+For advance payment:
+
+- advance due: 20% of final customer payable
+- remaining due: final customer payable minus advance paid
+
+Professional payout:
+
+- payout is based on the backend financial snapshot
+- GST is not professional earnings
+- platform commission is deducted according to the configured policy
+- final payout must be persisted, not recalculated differently by each screen
+
+### 3.3 Coupon Rule
+
+- only one coupon can be applied to a booking
+- the coupon must be validated by the backend
+- the coupon selection and resulting discount must be locked to the booking financial snapshot
+- a client must not be able to replace or repeatedly apply coupons after payment processing starts
+
+### 3.4 Booking Start Rule
+
+A professional can start a booking only when:
+
+- the booking is assigned to and accepted by that professional
+- the customer has fully paid the final payable amount
+- the start OTP is valid
+
+### 3.5 Admin Cancellation Rule
+
+An admin must be able to cancel a booking when no professional accepts it.
+
+The cancellation must:
+
+- be authorized on the backend
+- calculate the exact amount actually captured
+- create a refund record
+- initiate or record the refund safely
+- update the canonical booking and read models
+- notify the customer
+- preserve an audit trail
+
+### 3.6 Refund Policy
+
+Planned refund eligibility:
+
+| Condition | Refund percentage |
+|---|---:|
+| No professional assigned/accepted | 100% |
+| More than 72 hours before service | 100% |
+| 48 to 72 hours before service | 80% |
+| 24 to 48 hours before service | 50% |
+| Less than 24 hours before service | 0% |
+
+The refund base must be the exact eligible paid amount, not the original booking amount or an independently reconstructed total.
+
+### 3.7 Business ID Rule
+
+IDs must be centrally generated by the backend using transactional counters.
+
+Required ID families:
+
+- customer: `CUS-...`
+- professional: `PRO-...`
+- booking: `BKG-...`
+- transaction: `TXN-...`
+- order: `ORD-...`
+- customer invoice: `INV-CUS-...`
+- professional payout/payroll: `PAY-PRO-...`
+
+Frontend-generated, random, document-derived, or timestamp-derived identifiers must not be used as authoritative business IDs.
+
+## 4. Current Architecture
+
+### 4.1 Main Backend
+
+- `functions/index.js`
+
+This file contains most backend payment, refund, booking-start, booking-completion, invoice, payroll, and mirrored-booking logic.
+
+### 4.2 Main Flutter Services
+
+- `lib/app/services/booking/booking_service.dart`
+- `lib/app/services/payments/razorpay_payment_service.dart`
+- `lib/app/services/finance/finance_service.dart`
+- `lib/app/services/invoices/customer_invoice_pdf_service.dart`
+
+### 4.3 Main Firestore Collections
+
+The current implementation uses or writes the following finance and booking collections:
+
+- `bookings`
+- `customer_booking_requests`
+- `users/{customerId}/customer_bookings`
+- `users/{professionalId}/booking_requests`
+- `payments`
+- `payment_transactions`
+- `payment_orders`
+- `refunds`
+- `invoices`
+- `payrolls`
+- `finance_audit_logs`
+- `id_counters`
+
+### 4.4 Booking Copies
+
+Backend helper `writeBookingCopies` writes booking data to:
+
+- `bookings/{bookingId}`
+- `customer_booking_requests/{bookingId}`
+- `users/{customerId}/customer_bookings/{bookingId}`
+- `users/{professionalId}/booking_requests/{bookingId}`
+
+Flutter booking logic also writes and patches multiple copies.
+
+This means the application is maintaining several mutable sources of booking truth. Any failed write, missed patch, older client, or independently updated collection can make panels disagree.
+
+### 4.5 Current Responsibility Map
+
+| Responsibility | Current files | Current ownership problem |
+|---|---|---|
+| Customer booking input and client price calculation | `lib/app/screens/customer/home/services/widgets/customer_service_detail_template.dart`, `lib/app/screens/customer/getx/customer_booking_controller.dart` | client calculates and supplies values that should be backend-authoritative |
+| Booking creation and mirrored writes | `lib/app/services/booking/booking_service.dart` | Flutter creates the booking and several mutable copies |
+| Payment quote, order, verification, and remaining payment | `functions/index.js`, `lib/app/services/payments/razorpay_payment_service.dart` | backend verifies payment, but pricing starts from client-supplied values and Flutter has separate finance writes |
+| Coupon application | `functions/index.js`, `lib/app/screens/customer/getx/customer_booking_controller.dart`, `lib/app/screens/customer/home/customer_bookings_screen.dart` | coupon can be quoted/applied without one immutable booking coupon lock |
+| Booking status updates | `lib/app/services/booking/booking_service.dart`, `functions/index.js` | lifecycle authority is split between Flutter and backend |
+| Admin booking detail and actions | `lib/app/screens/admin/bookings/getx/admin_bookings_controller.dart`, `lib/app/screens/admin/bookings/models/admin_booking_request.dart`, `lib/app/screens/admin/bookings/admin_bookings_screen.dart` | admin reads a legacy mirror and writes lifecycle changes from Flutter |
+| Customer booking list/detail | `lib/app/screens/customer/getx/customer_bookings_tab_controller.dart`, `lib/app/screens/customer/home/customer_booking_status_screen.dart`, `lib/app/screens/customer/home/customerDashboard_Screen.dart` | customer reads and merges mirrors, then locally interprets financial fallbacks |
+| Professional booking list/detail | `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`, `lib/app/screens/professional/professionalDashboard/bookings/professional_booking_details_screen.dart` | professional reads canonical booking but sees customer-facing finance fields |
+| Payment, refund, invoice, payroll, and payout records | `lib/app/services/finance/finance_service.dart`, `functions/index.js` | both Flutter and backend create or mutate financial records |
+| Customer invoice PDF | `lib/app/services/invoices/customer_invoice_pdf_service.dart` | local invoice calculation can disagree with backend/payment truth |
+| Admin finance UI and actions | `lib/app/screens/admin/payments/admin_payments_screen.dart`, `lib/app/screens/admin/dashboard/getx/admin_dashboard_controller.dart` | critical finance actions are client-side and metrics mix non-final states |
+| Professional earnings and payout UI | `lib/app/screens/professional/professionalDashboard/earnings/getx/professionalEarnings_Controller.dart`, `lib/app/screens/professional/professionalDashboard/earnings/professionalEarning_Screen.dart` | summaries mix customer booking value with professional net payout |
+| Generated business IDs | `functions/index.js`, `lib/app/services/booking/booking_service.dart` | client-derived booking code exists; backend ID helper is missing |
+
+## 5. Current Booking Lifecycle
+
+### 5.1 Customer Booking Creation
+
+Current flow:
+
+1. Customer selects a service, rate, duration, and event details in the Flutter UI.
+2. Flutter calculates service subtotal, GST, and total.
+3. Customer controller requests a backend checkout quote using a client-provided total.
+4. Flutter creates booking documents before payment is completed.
+5. Flutter requests a Razorpay order.
+6. Payment is completed and verified by Cloud Functions.
+7. Cloud Functions patch payment fields into booking copies.
+
+Primary files:
+
+- `lib/app/screens/customer/home/services/widgets/customer_service_detail_template.dart`
+- `lib/app/screens/customer/getx/customer_booking_controller.dart`
+- `lib/app/services/booking/booking_service.dart`
+- `lib/app/services/payments/razorpay_payment_service.dart`
+- `functions/index.js`
+
+Problems:
+
+- booking creation is client-owned instead of backend-owned
+- the client supplies price inputs that the backend does not fully reprice from the service catalog
+- an unpaid booking remains when payment is abandoned or fails
+- coupon selection is not permanently locked to one booking
+- `basePrice` is stored as a subtotal in the service detail flow but later displayed as a rate per hour
+- booking ID is generated from a Firestore document ID on the client
+
+### 5.2 Admin Approval, Assignment, Rejection, and Rescheduling
+
+Current flow:
+
+- admin reads `customer_booking_requests`
+- admin actions call Flutter `BookingService`
+- Flutter directly writes booking status and assignment changes to Firestore copies
+- admin rejection can directly create a refund through Flutter `FinanceService`
+
+Primary files:
+
+- `lib/app/screens/admin/bookings/getx/admin_bookings_controller.dart`
+- `lib/app/screens/admin/bookings/models/admin_booking_request.dart`
+- `lib/app/screens/admin/bookings/admin_bookings_screen.dart`
+- `lib/app/services/booking/booking_service.dart`
+- `lib/app/services/finance/finance_service.dart`
+
+Problems:
+
+- admin does not read the canonical `bookings` collection
+- admin status mutations bypass backend transaction and authorization logic
+- admin rejection and backend cancellation are separate refund paths
+- no admin UI action calls the existing backend `cancelUnacceptedBookingByAdmin`
+- admin cancellation does not have one guaranteed cross-panel update path
+
+### 5.3 Professional Acceptance and Rejection
+
+Current flow:
+
+- professional reads canonical `bookings`
+- professional accept/reject calls Flutter `BookingService`
+- rejection moves the booking back to an approved/unassigned state
+
+Primary files:
+
+- `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`
+- `lib/app/services/booking/booking_service.dart`
+
+Problems:
+
+- professional lifecycle mutations are direct Firestore writes
+- admin and professional use different booking sources
+- a professionally rejected booking disappears from the professional Rejected tab because the final booking status becomes `APPROVED`, not `REJECTED`
+- there is no single backend transition validator for all panel actions
+
+### 5.4 Start Booking
+
+Current flow:
+
+- Flutter calls backend `verifyBookingOtpAndStart`
+- backend checks professional assignment, acceptance, full payment, and OTP
+- backend starts the booking and writes copies
+
+Primary files:
+
+- `lib/app/services/payments/razorpay_payment_service.dart`
+- `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`
+- `functions/index.js`
+
+Positive behavior:
+
+- this is one of the stronger flows because the backend enforces the critical start requirements
+
+Problems:
+
+- professional UI can still present a Start action before full payment; backend rejects it only after interaction
+- other lifecycle transitions remain Flutter-owned, so the start operation is not part of one consistent transition engine
+
+### 5.5 Complete Booking
+
+There are two competing completion paths.
+
+Backend path:
+
+- backend `endBooking` calls completion logic
+- backend creates completion financial records
+- backend creates invoice and payroll records
+
+Flutter path:
+
+- Flutter `BookingService.endBooking` patches completion status
+- Flutter calls `FinanceService.generateInvoiceForCompletedBooking`
+- Flutter calls `FinanceService.generatePayrollForCompletedBooking`
+
+Primary files:
+
+- `functions/index.js`
+- `lib/app/services/booking/booking_service.dart`
+- `lib/app/services/finance/finance_service.dart`
+
+Problems:
+
+- invoice and payroll generation can occur through two implementations
+- formulas, document IDs, statuses, and audit behavior can differ
+- duplicate or conflicting finance records are possible
+- completion is not guaranteed to be idempotent across both engines
+
+### 5.6 Cancellation
+
+Current state:
+
+- backend has `cancelUnacceptedBookingByAdmin`
+- Flutter admin UI does not call it
+- Flutter booking transition definitions do not consistently allow cancellation from active states
+- Flutter admin uses other status/rejection operations instead
+
+Backend cancellation currently:
+
+- verifies an admin caller
+- checks that a professional has not accepted
+- calculates captured payment
+- creates a requested refund record
+- updates canonical booking/payment data
+
+Missing or inconsistent behavior:
+
+- no frontend service method exposes the function
+- no admin cancellation button invokes it
+- mirrored booking copies are not consistently updated by this function
+- customer notification is not created
+- refund processing remains manual/requested
+- refund ID uses booking ID plus timestamp rather than a generated refund business ID
+
+## 6. Current Payment and Coupon Flow
+
+### 6.1 Backend Payment Functions
+
+`functions/index.js` currently includes:
+
+- `quoteCheckoutPayment`
+- `createPaymentOrder`
+- `createRemainingPaymentOrder`
+- `verifyPayment`
+- `razorpayWebhook`
+- `createOrReuseOrder`
+- `paidBookingPatch`
+- `resolveCoupon`
+- `buildFinancialBreakdown`
+- `remainingDueForBooking`
+
+### 6.2 Positive Payment Behavior
+
+- Razorpay payment signature verification is backend-owned.
+- Payment verification attempts idempotency by checking transaction and payment identifiers.
+- Backend breakdown generally applies the coupon to the net amount and recalculates GST.
+- Backend persists several financial snapshot fields on payment completion.
+
+### 6.3 Payment Problems
+
+- checkout starts from a client-provided total instead of an authoritative backend catalog price calculation
+- GST and totals are also calculated in Flutter
+- multiple UI and service fallbacks reconstruct money differently
+- remaining due logic can infer a 20% advance rather than rely only on the immutable stored snapshot
+- backend defaults GST to 18% and commission to 21% rather than consistently using a versioned service/settings snapshot
+- Flutter `FinanceService.createPaymentForBooking` can directly create a payment marked `PAID`
+- financial records and booking payment fields can be updated through different code paths
+- no one clearly defined payment ledger is used as the final authority
+
+### 6.4 Coupon Problems
+
+Current behavior:
+
+- backend can resolve and apply a coupon
+- Flutter lets the customer enter/apply a coupon during checkout
+- booking payment fields can later contain coupon data
+
+Missing:
+
+- no immutable `couponId` or coupon snapshot tied to a booking before payment processing
+- no robust one-coupon-per-booking lock
+- no backend rule preventing coupon replacement after quote/order creation
+- no atomic coupon redemption/usage-count transaction linked to successful payment
+- customer UI does not clearly lock or remove the coupon control after application/payment start
+
+## 7. Current Refund Flow
+
+### 7.1 Backend Refund Paths
+
+`functions/index.js` contains:
+
+- `processRefund`
+- `cancelUnacceptedBookingByAdmin`
+
+These are not one unified refund engine.
+
+### 7.2 Flutter Refund Path
+
+`lib/app/services/finance/finance_service.dart` can directly:
+
+- create refund records
+- approve refunds
+- reject refunds
+- complete refunds
+
+Admin payment UI calls these direct Flutter finance operations.
+
+### 7.3 Refund Problems
+
+- backend and Flutter implement separate refund calculations and status transitions
+- refund document IDs and schemas differ between paths
+- requested, approved, rejected, and completed refund records are not consistently reflected in booking copies
+- admin analytics can count requested or rejected refunds as actual refunded money
+- payment documents do not consistently receive a `refundedAmount` used by the admin revenue summary
+- no single backend operation guarantees Razorpay refund, ledger entry, booking status, payment status, and notification updates
+- some refund displays show only an eligibility percentage, not the actual refund amount and status
+
+### 7.4 Exact Paid Amount Requirement
+
+For admin cancellation when no professional accepts, the refund base must be:
+
+`sum(successfully captured payments) - sum(successfully completed refunds)`
+
+It must not be:
+
+- original total amount
+- final payable amount when only an advance was paid
+- a locally inferred payment amount
+- a requested refund that was never completed
+
+## 8. Current Invoice, Payroll, and Payout Flow
+
+### 8.1 Invoice Creation
+
+Invoices can be generated:
+
+- by Cloud Functions during backend completion
+- by Flutter `FinanceService`
+- locally as a customer PDF through `CustomerInvoicePdfService`
+
+Problems:
+
+- invoice creation has more than one owner
+- locally generated PDF uses root booking values and hardcoded GST assumptions
+- local invoice can ignore coupon discount and final payable amount
+- invoice ID is derived from booking ID rather than a generated invoice ID
+- customer invoice history and locally downloaded PDF can disagree
+
+### 8.2 Payroll Creation
+
+Payroll can be generated:
+
+- by backend completion logic
+- by Flutter `FinanceService`
+- by admin payment screen's automatic missing-payroll generation
+
+Problems:
+
+- payroll generation has more than one owner
+- admin payment screen initiates missing-payroll generation when opened
+- payroll ID is generally the booking ID rather than a generated payout/payroll ID
+- formulas are duplicated
+- `otherCharges` can be stored without being deducted from `netPayoutAmount`
+- there is no clearly authoritative immutable commission snapshot
+
+### 8.3 Payout Release
+
+Flutter `FinanceService.releasePayout` directly marks payout state.
+
+Problems:
+
+- payout release is not a protected backend operation
+- there is no guaranteed integration with an actual transfer/provider result
+- a client can mutate a critical finance status if rules permit it
+- payment, payroll, payout transfer, and audit records are not one atomic/backend-controlled workflow
+
+## 9. Current ID Generation
+
+### 9.1 What Exists
+
+- booking document IDs are created by Firestore from Flutter
+- Flutter derives a `BID...` booking code from the document ID
+- backend calls `nextHumanId("order", "ORD")` when creating an order
+- `id_counters` is listed in backend collection constants
+
+### 9.2 What Is Broken or Missing
+
+- `nextHumanId` is called but is not defined in the current `functions/index.js`
+- `id_counters` is not used by an implemented counter helper
+- no centralized booking ID generation
+- no centralized transaction ID generation
+- no centralized customer invoice ID generation
+- no centralized professional payout/payroll ID generation
+- refund IDs use inconsistent document IDs, including timestamps
+- frontend continues to derive/display raw or document IDs
+
+Conclusion: centralized generated business IDs do not currently exist as a working system.
+
+## 10. Frontend Audit: Customer Panel
+
+### 10.1 Customer Service Detail and Checkout
+
+Files:
+
+- `lib/app/screens/customer/home/services/widgets/customer_service_detail_template.dart`
+- `lib/app/screens/customer/getx/customer_booking_controller.dart`
+- `lib/app/screens/customer/home/customer_bookings_screen.dart`
+
+Current problems:
+
+- frontend calculates rate, duration subtotal, GST, and total
+- `_fixedGstPercent` and settings-based GST are both used, creating mixed assumptions
+- `basePrice` is stored as subtotal but later treated as rate per hour
+- backend quote starts from client-provided total
+- booking is created before payment succeeds
+- failed/cancelled payment can leave an unpaid booking
+- coupon UI is not locked after coupon selection/payment initiation
+- checkout wording indicates remaining payment before completion, while start policy requires full payment before service start
+
+Correct customer checkout display:
+
+- service rate
+- duration/quantity
+- service subtotal
+- applied coupon code
+- discount amount
+- discounted subtotal
+- GST
+- final payable
+- amount due now
+- remaining due
+
+All displayed values must come from one backend quote/snapshot.
+
+### 10.2 Customer Booking List and Dashboard
+
+Files:
+
+- `lib/app/screens/customer/getx/customer_bookings_tab_controller.dart`
+- `lib/app/screens/customer/home/customer_bookings_tab_screen.dart`
+- `lib/app/screens/customer/home/customerDashboard_Screen.dart`
+
+Current problems:
+
+- customer booking list reads a customer mirror rather than canonical/read-model data
+- dashboard merges as many as seven queries/copies and deduplicates them
+- stale copies can win the merge
+- amount cards use `totalAmount`, which is generally the original/pre-discount total
+- there is no dedicated Cancelled tab
+- status normalization is repeated in several files
+
+Correct customer booking card amount:
+
+- display `finalCustomerPayable`
+- separately display `paidAmount` or `remainingAmount` only where useful
+- never label original gross amount as the current payable amount
+
+### 10.3 Customer Booking Detail
+
+File:
+
+- `lib/app/screens/customer/home/customer_booking_status_screen.dart`
+
+Current problems:
+
+- reads a customer mirror, so it may be stale
+- uses multiple local fallbacks for payment fields
+- passes stored `basePrice` as `ratePerHour`, although current creation stores subtotal there
+- labels a pre-discount/original amount as "Total Booking Amount"
+- shows refund eligibility/percentage without complete refund amount, status, and transaction details
+- has no consistent customer cancellation/refund action
+- locally generated invoice can disagree with backend invoice/payment records
+- directly writes reviews to several booking copies
+
+Correct customer booking detail sections:
+
+- booking identity and current lifecycle status
+- service and schedule
+- assigned professional, when applicable
+- canonical customer payment breakdown
+- payment history
+- cancellation/refund status and amount
+- backend-generated invoice
+- lifecycle timeline
+
+## 11. Frontend Audit: Professional Panel
+
+### 11.1 Professional Booking List and Dashboard
+
+Files:
+
+- `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/bookings/professionalBooking_Screen.dart`
+- `lib/app/screens/professional/professionalDashboard/home/getx/professionalDashboard_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/home/professionalDashboard_Screen.dart`
+
+Current problems:
+
+- professional reads canonical bookings while admin/customer often read mirrors
+- accept/reject are direct Flutter writes, while start/end use or compete with backend actions
+- list and dashboard display `totalAmount`, which is customer-facing and can be pre-discount
+- monthly revenue sums completed booking `totalAmount`, not professional net payout
+- rejected booking can disappear because professional rejection resets booking to `APPROVED`
+- Start action can appear before full payment, even though backend later rejects it
+
+Correct professional booking card data:
+
+- booking business ID
+- service and schedule
+- acceptance/action status
+- professional booking value basis
+- expected payout, clearly marked as estimated until payroll is finalized
+- no customer paid/remaining amount
+
+### 11.2 Professional Booking Detail
+
+File:
+
+- `lib/app/screens/professional/professionalDashboard/bookings/professional_booking_details_screen.dart`
+
+Current problems:
+
+- displays customer paid amount and customer remaining amount
+- displays customer refund eligibility
+- calculates fallback commission and payout locally
+- uses a hardcoded 21% commission fallback
+- shows expected payout before authoritative payroll exists
+
+This violates the intended panel separation. Professionals should not see customer-facing payment or refund calculations.
+
+Correct professional booking detail finance section:
+
+- payout calculation status
+- eligible service value
+- GST exclusion/deduction as defined by policy
+- platform commission and commission rate snapshot
+- adjustments/other charges
+- expected or final net payout
+- payout release status and reference
+
+### 11.3 Professional Earnings
+
+Files:
+
+- `lib/app/screens/professional/professionalDashboard/earnings/getx/professionalEarnings_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professionalEarning_Screen.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professional_payment_history_screen.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professional_payment_details_screen.dart`
+
+Current problems:
+
+- "Total Revenue" and monthly revenue sum customer booking amount instead of professional net payout
+- pending/settled amounts use net payout, so cards mix different financial meanings
+- monthly chart mixes booking revenue and released payout
+- raw booking IDs are shown instead of business IDs
+
+Correct professional earnings summary:
+
+- gross eligible service value
+- commission deductions
+- other adjustments
+- net earnings
+- pending payout
+- released payout
+- payout history using generated payout IDs
+
+## 12. Frontend Audit: Admin Panel
+
+### 12.1 Admin Booking Management
+
+Files:
+
+- `lib/app/screens/admin/bookings/getx/admin_bookings_controller.dart`
+- `lib/app/screens/admin/bookings/models/admin_booking_request.dart`
+- `lib/app/screens/admin/bookings/admin_bookings_screen.dart`
+
+Current problems:
+
+- admin reads `customer_booking_requests`, not canonical bookings
+- approve, assign, reject, and reschedule are direct Flutter Firestore mutations
+- no admin action calls backend `cancelUnacceptedBookingByAdmin`
+- no "Cancel booking and refund exact paid amount" operation
+- admin detail mixes booking operations and finance calculations
+- amount uses `totalAmount` rather than final customer payable
+- refund display lacks complete amount/status/reference
+- status and financial-field normalization is duplicated
+
+Correct admin booking detail sections:
+
+- booking overview and business IDs
+- customer details
+- professional assignment and acceptance
+- service and schedule
+- booking lifecycle timeline
+- customer payment summary and transactions
+- coupon snapshot
+- refund records
+- professional payroll/payout
+- audit logs
+- authorized lifecycle actions
+
+### 12.2 Admin Payments, Refunds, and Payouts
+
+File:
+
+- `lib/app/screens/admin/payments/admin_payments_screen.dart`
+
+Current problems:
+
+- direct Flutter finance actions approve/complete refunds and release payouts
+- screen automatically generates missing payrolls on open
+- "Refunded Revenue" depends on `payments.refundedAmount`, which is not consistently written
+- refund analytics can count requested/rejected refunds as completed refunds
+- total professional payouts can sum pending payroll, not only released payouts
+- payout/revenue labels mix customer revenue and professional earnings
+- refund policy wording does not clearly express exact time windows
+- raw document/booking IDs are displayed
+
+Correct admin finance dashboard:
+
+- captured customer payments
+- completed refunds only
+- net captured revenue
+- pending refund liability
+- pending professional payout
+- released professional payout
+- platform commission
+- tax/GST liability
+- each metric defined from canonical ledger statuses
+
+### 12.3 Admin Dashboard
+
+Files:
+
+- `lib/app/screens/admin/dashboard/getx/admin_dashboard_controller.dart`
+- `lib/app/screens/admin/dashboard/admin_dashboard_screen.dart`
+
+Current problems:
+
+- pending payout lookup omits the actual `netPayoutAmount` field used by payroll records
+- pending payout can therefore show zero or an incorrect value
+- monthly payouts can include payrolls that are not released
+- duplicated status fallback logic can classify records differently from other screens
+
+## 13. Data Meaning Problems
+
+Several fields are currently overloaded or interpreted differently.
+
+| Current field | Current ambiguity/problem | Required canonical meaning |
+|---|---|---|
+| `basePrice` | sometimes rate, sometimes subtotal | replace/supplement with explicit `rateAmount` and `serviceSubtotal` |
+| `totalAmount` | often original GST-inclusive amount, but displayed as final payable | use explicit `originalCustomerPayable` |
+| `finalAmount` | exists in some paths, absent/fallback in others | canonical `finalCustomerPayable` |
+| `paidAmount` | can be stored/inferred in multiple places | sum of captured ledger payments |
+| `remainingAmount` | sometimes inferred using 20% | persisted snapshot/ledger-derived balance |
+| `bookingAmount` | can mean gross customer value or payout basis | use explicit names |
+| `professionalEarnings` | calculated in UI or booking | use finalized payroll `netPayoutAmount` |
+| `refundAmount` | may represent requested or completed refund | separate requested/approved/completed amounts/status |
+
+Required financial vocabulary:
+
+- `rateAmount`
+- `quantityOrDuration`
+- `serviceSubtotal`
+- `couponCode`
+- `couponDiscountAmount`
+- `discountedServiceSubtotal`
+- `gstRate`
+- `gstAmount`
+- `originalCustomerPayable`
+- `finalCustomerPayable`
+- `capturedAmount`
+- `refundedAmount`
+- `remainingAmount`
+- `commissionRate`
+- `commissionAmount`
+- `payoutAdjustments`
+- `netPayoutAmount`
+
+## 14. Critical Defects and Risks
+
+### P0: Backend Cannot Currently Parse
+
+`functions/index.js` contains a syntax error near the `paidBookingPatch` financial-breakdown call. The object passed to `buildFinancialBreakdown` is closed incorrectly.
+
+Verification:
+
+- `npm run lint` in `functions` fails with `SyntaxError: Unexpected token ')'`
+
+Impact:
+
+- Cloud Functions code cannot reliably lint, deploy, or run in its current state
+
+### P0: Planned ID Helper Is Missing
+
+`createPaymentOrder` calls `nextHumanId("order", "ORD")`, but `nextHumanId` is not implemented.
+
+Impact:
+
+- order creation fails at runtime after the syntax issue is fixed
+- centralized IDs are not operational
+
+### P0: Direct Client Finance Mutations
+
+Flutter `FinanceService` directly writes payments, refunds, invoices, payrolls, payout status, and finance audit records.
+
+Impact:
+
+- authorization depends heavily on Firestore rules
+- finance operations are not guaranteed atomic or provider-verified
+- clients and Cloud Functions can disagree
+
+### P0: No Single Booking Source of Truth
+
+Multiple mutable booking copies are read by different panels.
+
+Impact:
+
+- stale statuses and financial values
+- different screens show different truth
+- repair and reconciliation become difficult
+
+### P1: Two Completion and Finance Engines
+
+Both Flutter and Cloud Functions create completion finance records.
+
+Impact:
+
+- duplicate or inconsistent invoice/payroll data
+
+### P1: Customer Pricing Is Mislabelled
+
+`basePrice` is stored as subtotal but displayed as rate per hour. `totalAmount` is displayed as total payable after coupon.
+
+Impact:
+
+- visibly wrong customer details and invoices
+
+### P1: Professional Screens Show Customer Finance
+
+Professional detail displays customer paid, remaining, and refund data.
+
+Impact:
+
+- wrong panel responsibility and misleading financial expectations
+
+### P1: Admin Cancellation Is Not Wired
+
+Backend function exists but no admin UI/service path uses it.
+
+Impact:
+
+- required exact-paid refund workflow is unavailable
+
+### P1: Refund and Payout Analytics Count Wrong States
+
+Requested refunds and pending payrolls can be counted as completed money movement.
+
+Impact:
+
+- incorrect admin revenue, liability, and payout reporting
+
+### P1: Invoice PDF Can Ignore Coupons
+
+Local customer invoice generation uses root amounts and hardcoded GST.
+
+Impact:
+
+- invoice can disagree with actual payment
+
+### P2: Insufficient Tests
+
+Only a small set of widget/unit tests exists. There are no end-to-end tests for the complete booking-money lifecycle.
+
+Impact:
+
+- regressions in money and status behavior are likely
+
+## 15. Target Architecture
+
+### 15.1 Single Write Authority
+
+All business-critical writes must go through authenticated Cloud Functions or a trusted backend:
+
+- create booking and financial snapshot
+- apply/lock coupon
+- create payment order
+- verify payment
+- approve/assign/accept/reject/reschedule/cancel booking
+- verify start OTP
+- complete booking
+- request/approve/process refund
+- create invoice
+- create payroll
+- release payout
+
+Flutter should request commands and display backend results.
+
+### 15.2 Canonical Booking and Read Models
+
+Recommended structure:
+
+- `bookings/{bookingId}` is the canonical booking
+- panel screens query canonical bookings where feasible
+- if read models are required, they are backend-generated projections only
+- clients never directly mutate projections
+- projections include `sourceVersion` or `updatedAt` to support reconciliation
+
+### 15.3 Immutable Financial Snapshot
+
+At booking/payment initialization, persist a versioned financial snapshot:
+
+```text
+pricingSnapshot:
+  currency
+  rateAmount
+  quantityOrDuration
+  serviceSubtotal
+  couponId
+  couponCode
+  couponDiscountAmount
+  discountedServiceSubtotal
+  gstRate
+  gstAmount
+  originalCustomerPayable
+  finalCustomerPayable
+  advanceRate
+  advanceDue
+  commissionRate
+  commissionAmount
+  expectedNetPayout
+  pricingVersion
+  createdAt
+```
+
+Later payment, refund, invoice, and payroll operations must reference this snapshot and the payment ledger.
+
+### 15.4 Payment Ledger
+
+Each money event must have one immutable ledger/transaction record:
+
+- order created
+- payment captured
+- payment failed
+- refund requested
+- refund completed
+- payout created
+- payout released
+- payout failed
+
+Derived totals must come from successful ledger states, not UI reconstruction.
+
+### 15.5 Backend State Machines
+
+Booking transitions must be validated centrally.
+
+Suggested booking lifecycle:
+
+```text
+DRAFT
+PAYMENT_PENDING
+REQUESTED
+APPROVED
+ASSIGNED
+ACCEPTED
+IN_PROGRESS
+COMPLETED
+CANCELLED
+REJECTED
+```
+
+Suggested payment lifecycle:
+
+```text
+UNPAID
+ORDER_CREATED
+PARTIALLY_PAID
+FULLY_PAID
+REFUND_PENDING
+PARTIALLY_REFUNDED
+REFUNDED
+FAILED
+```
+
+Suggested payroll/payout lifecycle:
+
+```text
+NOT_ELIGIBLE
+PENDING
+APPROVED
+PROCESSING
+RELEASED
+FAILED
+ON_HOLD
+```
+
+### 15.6 Panel-Specific Read Rules
+
+Customer can see:
+
+- customer payable breakdown
+- payment history
+- remaining balance
+- refund amount/status
+- invoice
+
+Professional can see:
+
+- assignment and lifecycle data
+- payout basis
+- commission/deductions
+- expected/final net payout
+- payout status/history
+
+Professional must not see:
+
+- customer payment method
+- customer paid/remaining values
+- customer coupon/refund calculations
+
+Admin can see:
+
+- full booking, payment, refund, payroll, payout, and audit data
+- clearly separated customer money and professional money
+
+## 16. Required Backend Operations
+
+The corrected system should expose backend commands with idempotency keys and transaction safety.
+
+Required operations:
+
+1. `createBookingQuote`
+2. `createBookingAndPaymentOrder`
+3. `applyCouponToBooking`
+4. `verifyPayment`
+5. `createRemainingPaymentOrder`
+6. `approveBooking`
+7. `assignProfessional`
+8. `acceptBooking`
+9. `rejectAssignment`
+10. `rescheduleBooking`
+11. `cancelUnacceptedBookingByAdmin`
+12. `cancelBookingByCustomer`
+13. `verifyBookingOtpAndStart`
+14. `completeBooking`
+15. `requestRefund`
+16. `processRefund`
+17. `createInvoice`
+18. `createPayroll`
+19. `releasePayout`
+20. `reconcileBookingFinance`
+
+Every operation must:
+
+- authenticate caller
+- authorize caller role and ownership
+- validate current state
+- use canonical data
+- perform idempotent writes
+- write an audit event
+- update projections/read models
+- return the authoritative resulting snapshot
+
+## 17. Required Data Reconciliation
+
+Existing production/development data should not simply be read under the new rules without reconciliation.
+
+Required reconciliation process:
+
+1. Inventory every canonical and mirrored booking.
+2. Identify conflicting status, assignment, payment, coupon, and amount values.
+3. Select canonical values using payment-provider records and audit timestamps.
+4. Recalculate or flag financial snapshots without silently changing captured money.
+5. Link payments, refunds, invoices, and payrolls to canonical booking IDs.
+6. Generate missing business IDs.
+7. identify duplicate invoices/payrolls/refunds.
+8. Mark invalid or ambiguous records for manual review.
+9. rebuild backend-owned read models.
+10. produce a reconciliation report before enabling new mutations.
+
+## 18. Exact File Map and Remediation Plan
+
+### Phase 0: Stabilize and Freeze Risky Paths
+
+Modify:
+
+- `functions/index.js`
+- `lib/app/services/finance/finance_service.dart`
+- `lib/app/services/booking/booking_service.dart`
+
+Work:
+
+- fix backend syntax error
+- implement or remove missing `nextHumanId` call safely
+- prevent new direct client finance mutations
+- identify and disable duplicate completion/invoice/payroll paths
+
+### Phase 1: Canonical Models, IDs, and Financial Calculation
+
+Modify/create:
+
+- `functions/index.js` or split into backend domain modules
+- backend booking/pricing/payment/refund/payroll model modules
+- backend ID-generation module
+
+Work:
+
+- implement transactional ID counters
+- generate booking/order/transaction/invoice/payout IDs
+- define canonical fields and statuses
+- centralize price, coupon, GST, advance, refund, commission, and payout calculations
+- persist immutable pricing snapshots
+
+### Phase 2: Backend-Owned Booking Lifecycle
+
+Modify:
+
+- `functions/index.js`
+- `lib/app/services/booking/booking_service.dart`
+- `lib/app/services/payments/razorpay_payment_service.dart`
+- `lib/app/screens/admin/bookings/getx/admin_bookings_controller.dart`
+- `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`
+- `lib/app/screens/customer/getx/customer_booking_controller.dart`
+
+Work:
+
+- move creation and all lifecycle transitions to backend commands
+- wire admin cancellation
+- make assignment/acceptance/rejection/reschedule backend-owned
+- keep start/completion in the same backend transition engine
+
+### Phase 3: Unified Payment, Refund, Invoice, and Payout
+
+Modify:
+
+- `functions/index.js`
+- `lib/app/services/payments/razorpay_payment_service.dart`
+- `lib/app/services/finance/finance_service.dart`
+- `lib/app/services/invoices/customer_invoice_pdf_service.dart`
+- `lib/app/screens/admin/payments/admin_payments_screen.dart`
+
+Work:
+
+- use one immutable payment ledger
+- enforce one coupon per booking
+- unify exact-paid refund processing
+- generate backend invoice and payroll only once
+- move payout release to backend
+- make customer PDF consume the canonical invoice snapshot
+
+### Phase 4: Correct Customer Frontend
+
+Modify:
+
+- `lib/app/screens/customer/home/services/widgets/customer_service_detail_template.dart`
+- `lib/app/screens/customer/getx/customer_booking_controller.dart`
+- `lib/app/screens/customer/home/customer_bookings_screen.dart`
+- `lib/app/screens/customer/getx/customer_bookings_tab_controller.dart`
+- `lib/app/screens/customer/home/customer_bookings_tab_screen.dart`
+- `lib/app/screens/customer/home/customer_booking_status_screen.dart`
+- `lib/app/screens/customer/home/customerDashboard_Screen.dart`
+- customer invoice/history screens under `lib/app/screens/customer/profile/`
+
+Work:
+
+- display backend quote/snapshot only
+- correct rate versus subtotal labels
+- display final payable instead of original total
+- remove multi-copy dashboard merge
+- show canonical payment/refund/invoice details
+- lock coupon appropriately
+
+### Phase 5: Correct Professional Frontend
+
+Modify:
+
+- `lib/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/bookings/professionalBooking_Screen.dart`
+- `lib/app/screens/professional/professionalDashboard/bookings/professional_booking_details_screen.dart`
+- `lib/app/screens/professional/professionalDashboard/home/getx/professionalDashboard_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/home/professionalDashboard_Screen.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/getx/professionalEarnings_Controller.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professionalEarning_Screen.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professional_payment_history_screen.dart`
+- `lib/app/screens/professional/professionalDashboard/earnings/professional_payment_details_screen.dart`
+
+Work:
+
+- remove customer-facing payment/refund values
+- use payroll net payout for earnings
+- distinguish expected versus finalized payout
+- correct rejected-assignment history
+- hide/disable invalid lifecycle actions using backend capabilities
+
+### Phase 6: Correct Admin Frontend
+
+Modify:
+
+- `lib/app/screens/admin/bookings/getx/admin_bookings_controller.dart`
+- `lib/app/screens/admin/bookings/models/admin_booking_request.dart`
+- `lib/app/screens/admin/bookings/admin_bookings_screen.dart`
+- `lib/app/screens/admin/payments/admin_payments_screen.dart`
+- `lib/app/screens/admin/dashboard/getx/admin_dashboard_controller.dart`
+- `lib/app/screens/admin/dashboard/admin_dashboard_screen.dart`
+
+Work:
+
+- read canonical/admin read-model data
+- wire backend lifecycle commands
+- add cancel-unaccepted and exact-paid-refund action
+- separate booking operations from finance details
+- count only completed refunds and released payouts
+- fix pending payout field mapping
+
+### Phase 7: Rules, Notifications, Reconciliation, and Tests
+
+Modify/create:
+
+- active Firestore security rules and indexes
+- backend notification logic
+- reconciliation/migration scripts
+- backend unit/integration tests
+- Flutter controller/widget tests
+
+Work:
+
+- deny direct client writes to protected finance and lifecycle fields
+- notify customer/professional/admin on relevant transitions
+- reconcile existing records
+- test every lifecycle and money-state transition
+
+## 19. Required Test Matrix
+
+Minimum automated scenarios:
+
+### Booking
+
+- create booking with authoritative catalog price
+- prevent invalid status transitions
+- assign, accept, reject, reassign, reschedule
+- prevent start before full payment
+- prevent start with invalid OTP
+- complete once only
+
+### Coupon
+
+- valid coupon
+- expired coupon
+- disabled coupon
+- usage limit exceeded
+- coupon replacement blocked
+- only one coupon redemption per booking
+- concurrent coupon redemption
+
+### Payment
+
+- full payment
+- advance payment
+- remaining payment
+- abandoned payment
+- failed payment
+- duplicate webhook
+- duplicate verification
+- payment amount mismatch
+
+### Refund
+
+- no professional accepted, exact captured amount
+- more than 72 hours
+- 48 to 72 hours
+- 24 to 48 hours
+- less than 24 hours
+- partially paid booking
+- duplicate refund request
+- failed provider refund
+- analytics excludes pending/rejected refund
+
+### Payroll and Payout
+
+- create payroll only after eligible completion
+- one payroll per booking
+- correct commission/GST/adjustment calculation
+- payout release only once
+- payout failure and retry
+- analytics counts only released payout
+
+### Frontend
+
+- all panels show the same lifecycle state
+- customer sees final payable, not original total
+- professional does not see customer payment/refund fields
+- admin sees separated customer and professional finance
+- generated IDs display consistently
+- stale read model is detected/reconciled
+
+## 20. Verification Performed During This Audit
+
+- traced booking creation and transitions across customer, professional, and admin code
+- traced payment quote, order, verification, remaining payment, and webhook logic
+- traced coupon calculation and persistence
+- traced Flutter and backend refund implementations
+- traced invoice, payroll, and payout implementations
+- inspected panel-level financial displays and data sources
+- inspected current ID-generation behavior
+- inspected available tests
+- ran backend lint command
+- attempted Flutter static analysis
+
+Results:
+
+- backend lint failed because `functions/index.js` has a syntax error near line 890
+- `nextHumanId` is referenced but not implemented
+- Flutter analysis did not complete within the audit timeout, so a clean static-analysis result is not available
+- only limited tests exist for this domain
+
+## 21. Final Assessment
+
+The current behavior is not caused by one isolated calculation bug. It is an architecture-level ownership problem:
+
+- multiple writers
+- multiple booking copies
+- multiple finance calculators
+- ambiguous field names
+- panel-specific reinterpretation
+- insufficient transaction, authorization, reconciliation, and test coverage
+
+The safest correction is not to patch individual labels or formulas independently. The system should first establish backend ownership, canonical data definitions, an immutable financial snapshot, a payment ledger, and one state-transition engine. The three panels can then be corrected to display role-appropriate projections of the same truth.

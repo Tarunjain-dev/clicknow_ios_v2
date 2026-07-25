@@ -1,5 +1,4 @@
 import Flutter
-import GoogleMaps
 import UIKit
 
 @main

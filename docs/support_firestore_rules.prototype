@@ -1,0 +1,91 @@
+// PROTOTYPE ONLY. Review and merge with the application's complete rules
+// before deployment. Do not deploy this standalone file because it intentionally
+// denies every non-support collection.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        (userData().rbacRole == 'admin' ||
+         userData().userRole == 'admin' ||
+         userData().role == 'admin');
+    }
+
+    function ownsTicket(ticketId) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/support_tickets/$(ticketId))
+          .data.raisedByUserId == request.auth.uid;
+    }
+
+    function validTicket(data) {
+      return data.keys().hasAll([
+        'ticketId', 'raisedByUserId', 'raisedByRole', 'raisedByName',
+        'category', 'subject', 'description', 'status', 'priority',
+        'userUnreadCount', 'adminUnreadCount', 'createdAt', 'updatedAt'
+      ]) &&
+      data.raisedByUserId is string &&
+      data.raisedByRole in ['customer', 'professional'] &&
+      data.subject is string && data.subject.size() >= 5 && data.subject.size() <= 160 &&
+      data.description is string && data.description.size() >= 15 && data.description.size() <= 5000 &&
+      data.status in [
+        'OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER', 'WAITING_FOR_ADMIN',
+        'RESOLVED', 'CLOSED', 'REOPENED'
+      ] &&
+      data.priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] &&
+      data.userUnreadCount is int && data.userUnreadCount >= 0 &&
+      data.adminUnreadCount is int && data.adminUnreadCount >= 0;
+    }
+
+    function validMessage(data) {
+      return data.keys().hasAll([
+        'messageId', 'senderId', 'senderRole', 'senderName', 'messageType',
+        'isReadByUser', 'isReadByAdmin', 'createdAt'
+      ]) &&
+      data.senderId is string &&
+      data.senderRole in ['customer', 'professional', 'admin'] &&
+      data.messageType in ['text', 'image', 'system'] &&
+      data.isReadByUser is bool &&
+      data.isReadByAdmin is bool;
+    }
+
+    match /support_tickets/{ticketId} {
+      allow create: if signedIn() &&
+        request.resource.data.raisedByUserId == request.auth.uid &&
+        validTicket(request.resource.data);
+      allow read: if isAdmin() || resource.data.raisedByUserId == request.auth.uid;
+      allow update: if isAdmin() && validTicket(request.resource.data);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || ownsTicket(ticketId);
+        allow create: if validMessage(request.resource.data) &&
+          ((isAdmin() &&
+            request.resource.data.senderId == request.auth.uid &&
+            request.resource.data.senderRole == 'admin') ||
+           (ownsTicket(ticketId) &&
+            request.resource.data.senderId == request.auth.uid &&
+            request.resource.data.senderRole in ['customer', 'professional'] &&
+            request.resource.data.messageType in ['text', 'image']));
+        allow update: if isAdmin();
+        allow delete: if false;
+      }
+    }
+
+    match /support_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

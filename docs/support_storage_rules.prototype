@@ -1,0 +1,36 @@
+// PROTOTYPE ONLY. Merge with the application's complete Storage rules before
+// deployment. The ticket-owner lookup protects support images from other users.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ticket(ticketId) {
+      return firestore.get(
+        /databases/(default)/documents/support_tickets/$(ticketId)
+      ).data;
+    }
+
+    function isOwner(ticketId) {
+      return signedIn() && ticket(ticketId).raisedByUserId == request.auth.uid;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid))
+          .data.rbacRole == 'admin';
+    }
+
+    function validSupportImage() {
+      return request.resource.size < 8 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    match /support_tickets/{ticketId}/{allPaths=**} {
+      allow read: if isOwner(ticketId) || isAdmin();
+      allow write: if (isOwner(ticketId) || isAdmin()) && validSupportImage();
+    }
+  }
+}

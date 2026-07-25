@@ -1,0 +1,21 @@
+{
+  "name": "clicknow-functions",
+  "description": "Cloud Functions for ClickNow payments",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "node --check index.js",
+    "test": "node --test",
+    "reconcile:bookings": "node scripts/reconcile-bookings.js",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0",
+    "razorpay": "^2.9.5"
+  },
+  "devDependencies": {}
+}

@@ -94,7 +94,7 @@ class OnBoardingNextButton extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              index == 3 ? "Start" : "Next",
+              index == 3 ? "START" : "Next",
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: ResponsiveUtility.fontSize(14),

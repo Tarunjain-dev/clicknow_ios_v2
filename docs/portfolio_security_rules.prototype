@@ -1,0 +1,63 @@
+// PROTOTYPE ONLY. Merge these blocks into the application's real
+// Firestore and Storage rules before release.
+
+// Firestore rules:
+//
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     function signedIn() {
+//       return request.auth != null;
+//     }
+//
+//     function userDoc() {
+//       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+//     }
+//
+//     function isAdmin() {
+//       return signedIn() &&
+//         (userDoc().role == 'admin' ||
+//          userDoc().rbacRole == 'admin' ||
+//          userDoc().userRole == 'admin');
+//     }
+//
+//     match /portfolio_content/{docId} {
+//       allow read: if true;
+//       allow create, update, delete: if isAdmin();
+//     }
+//
+//     match /portfolio_services/{docId} {
+//       allow read: if resource.data.isVisible == true || isAdmin();
+//       allow create, update, delete: if isAdmin();
+//     }
+//
+//     match /portfolio_media/{docId} {
+//       allow read: if resource.data.isVisible == true || isAdmin();
+//       allow create, update, delete: if isAdmin();
+//     }
+//   }
+// }
+
+// Storage rules:
+//
+// rules_version = '2';
+// service firebase.storage {
+//   match /b/{bucket}/o {
+//     function signedIn() {
+//       return request.auth != null;
+//     }
+//
+//     function isAdmin() {
+//       let user = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+//       return signedIn() &&
+//         (user.role == 'admin' ||
+//          user.rbacRole == 'admin' ||
+//          user.userRole == 'admin');
+//     }
+//
+//     match /portfolio/{serviceKey}/{mediaType}/{fileName} {
+//       allow read: if true;
+//       allow create, update, delete: if isAdmin();
+//     }
+//   }
+// }
