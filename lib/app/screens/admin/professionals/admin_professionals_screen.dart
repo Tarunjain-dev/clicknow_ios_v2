@@ -50,55 +50,53 @@ class _AdminProfessionalsScreenState extends State<AdminProfessionalsScreen> {
           scale: scale,
           activeRoute: AppRoutes.adminProfessionalsRoute,
         ),
-        body: SafeArea(
-          child: Obx(
-            () => RefreshIndicator(
-              onRefresh: () => controller.refreshProfessionals(showMessage: true),
-              child: Column(
-                children: [
-                  /// -- App Bar
-                  _header(scale),
-
-                  /// -- Body
-                  Expanded(
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      children: [
-                        Padding(
-                          padding: ResponsiveUtility.only(left: 14, top: 10, bottom: 16, right: 14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _overviewTitle(scale),
-                              SizedBox(height: ResponsiveUtility.height(10)),
-                              _overviewCards(scale),
-                              SizedBox(height: ResponsiveUtility.height(16)),
-                              _listHeader(scale),
-                              SizedBox(height: ResponsiveUtility.height(10)),
-                              if (controller.isLoading.value && controller.filteredProfessionals.isEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: scale.getScaledHeight(36),
-                                  ),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              else if (controller.filteredProfessionals.isEmpty)
-                                _emptyState(scale)
-                              else
-                                ...controller.filteredProfessionals.map(
-                                  (profile) => _professionalCard(profile, scale),
+        body: Obx(
+          () => RefreshIndicator(
+            onRefresh: () => controller.refreshProfessionals(showMessage: true),
+            child: Column(
+              children: [
+                /// -- App Bar
+                _header(scale),
+        
+                /// -- Body
+                Expanded(
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    children: [
+                      Padding(
+                        padding: ResponsiveUtility.only(left: 14, top: 10, bottom: 16, right: 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _overviewTitle(scale),
+                            SizedBox(height: ResponsiveUtility.height(10)),
+                            _overviewCards(scale),
+                            SizedBox(height: ResponsiveUtility.height(16)),
+                            _listHeader(scale),
+                            SizedBox(height: ResponsiveUtility.height(10)),
+                            if (controller.isLoading.value && controller.filteredProfessionals.isEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  top: scale.getScaledHeight(36),
                                 ),
-                            ],
-                          ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else if (controller.filteredProfessionals.isEmpty)
+                              _emptyState(scale)
+                            else
+                              ...controller.filteredProfessionals.map(
+                                (profile) => _professionalCard(profile, scale),
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -108,7 +106,7 @@ class _AdminProfessionalsScreenState extends State<AdminProfessionalsScreen> {
 
   Widget _header(ScalingUtility scale) {
     return Container(
-      padding: ResponsiveUtility.only(left: 10, top: 8, right: 12, bottom: showSearchBar ? 12 : 10),
+      padding: ResponsiveUtility.only(left: 10, top: 60, right: 12, bottom: showSearchBar ? 12 : 10),
       color: Color(0xff6F18A8),
       child: Column(
         children: [

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -198,15 +199,28 @@ class RazorpayPaymentService {
     required String eventDurationHours,
     String couponCode = '',
   }) async {
-    final data = await _callFunction('quoteCheckoutPayment', <String, dynamic>{
+    final payload = <String, dynamic>{
       'paymentMode': paymentMode.code,
       'couponCode': couponCode.trim(),
       'serviceCatalogId': serviceCatalogId.trim(),
       'eventTypeId': eventTypeId.trim(),
       'planKey': planKey.trim(),
       'eventDurationHours': eventDurationHours.trim(),
-    });
-    return RazorpayPaymentQuote.fromMap(data);
+    };
+    debugPrint(
+      '[Coupon] Quote request: paymentMode=${paymentMode.code} '
+      'coupon="${couponCode.trim()}" service="$serviceCatalogId" '
+      'eventType="$eventTypeId" plan="$planKey" duration="$eventDurationHours"',
+    );
+    final data = await _callFunction('quoteCheckoutPayment', payload);
+    final quote = RazorpayPaymentQuote.fromMap(data);
+    debugPrint(
+      '[Coupon] Quote result: applied=${quote.couponApplied} '
+      'code="${quote.couponCode}" subtotal=${quote.netAmount} '
+      'discount=${quote.discountAmount} final=${quote.finalAmount} '
+      'payable=${quote.payableAmount}',
+    );
+    return quote;
   }
 
   Future<RazorpayOrderInfo> createPaymentOrder({
@@ -214,12 +228,24 @@ class RazorpayPaymentService {
     required CustomerPaymentMode paymentMode,
     String couponCode = '',
   }) async {
-    final data = await _callFunction('createPaymentOrder', <String, dynamic>{
+    final payload = <String, dynamic>{
       'bookingId': bookingId,
       'paymentMode': paymentMode.code,
       'couponCode': couponCode.trim(),
-    });
-    return RazorpayOrderInfo.fromMap(data);
+    };
+    debugPrint(
+      '[Payment] Order request payload: bookingId=$bookingId '
+      'paymentMode=${paymentMode.code} coupon="${couponCode.trim()}"',
+    );
+    final data = await _callFunction('createPaymentOrder', payload);
+    final order = RazorpayOrderInfo.fromMap(data);
+    debugPrint(
+      '[Payment] Order result: bookingId=${order.bookingId} '
+      'orderId=${order.orderId} amountPaise=${order.amountPaise} '
+      'payable=${order.payableAmount} remaining=${order.remainingAmount} '
+      'discount=${order.discountAmount} keyIdPresent=${order.keyId.isNotEmpty}',
+    );
+    return order;
   }
 
   Future<RazorpayOrderInfo> createRemainingPaymentOrder({
@@ -345,6 +371,11 @@ class RazorpayPaymentService {
       },
     };
 
+    debugPrint(
+      '[Payment] Razorpay options: orderId=${order.orderId} '
+      'amountPaise=${order.amountPaise} currency=${order.currency} '
+      'paymentMode=${order.paymentMode} keyIdPresent=${order.keyId.isNotEmpty}',
+    );
     _razorpay.open(options);
     return completer.future.whenComplete(() {
       _activeCheckout = null;

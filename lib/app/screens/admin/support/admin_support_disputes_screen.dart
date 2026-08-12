@@ -55,106 +55,104 @@ class _AdminSupportDisputesScreenState extends State<AdminSupportDisputesScreen>
           scale: scale,
           activeRoute: AppRoutes.adminSupportDisputesRoute,
         ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _header(scale),
-              Expanded(
-                child: _actor == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : _actor!.role != 'admin'
-                    ? const Center(
-                        child: Text(
-                          'Admin access is required.',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      )
-                    : StreamBuilder<List<SupportTicketModel>>(
-                        stream: _service.streamAllTicketsForAdmin(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return const Center(
-                              child: Text(
-                                'Unable to load support tickets.',
-                                style: TextStyle(color: Colors.black),
-                              ),
-                            );
-                          }
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          final all = snapshot.data!;
-                          final filtered = all
-                              .where(_matches)
-                              .toList(growable: false);
-                          return ListView(
-                            padding: ResponsiveUtility.only(
-                              left: 14,
-                              right: 14,
-                              top: 12,
-                              bottom: 24,
+        body: Column(
+          children: [
+            _header(scale),
+            Expanded(
+              child: _actor == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : _actor!.role != 'admin'
+                  ? const Center(
+                      child: Text(
+                        'Admin access is required.',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    )
+                  : StreamBuilder<List<SupportTicketModel>>(
+                      stream: _service.streamAllTicketsForAdmin(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return const Center(
+                            child: Text(
+                              'Unable to load support tickets.',
+                              style: TextStyle(color: Colors.black),
                             ),
-                            children: [
-                              _summaries(all),
-                              SizedBox(height: ResponsiveUtility.height(12)),
-                              TextField(
-                                controller: _search,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText: 'Search ticket, user, phone, subject, booking...',
-                                  hintStyle: const TextStyle(color: Colors.black54,),
-                                  prefixIcon: const Icon(
-                                    Icons.search,
-                                    color: Colors.black54,
-                                  ),
-                                  filled: true,
-                                  fillColor: const Color(0xffF6F4FF),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
+                          );
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final all = snapshot.data!;
+                        final filtered = all
+                            .where(_matches)
+                            .toList(growable: false);
+                        return ListView(
+                          padding: ResponsiveUtility.only(
+                            left: 14,
+                            right: 14,
+                            top: 12,
+                            bottom: 24,
+                          ),
+                          children: [
+                            _summaries(all),
+                            SizedBox(height: ResponsiveUtility.height(12)),
+                            TextField(
+                              controller: _search,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: 'Search ticket, user, phone, subject, booking...',
+                                hintStyle: const TextStyle(color: Colors.black54,),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: Colors.black54,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xffF6F4FF),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
                                 ),
                               ),
-                              SizedBox(height: ResponsiveUtility.height(10)),
-                              _filters(all),
-                              SizedBox(height: ResponsiveUtility.height(14)),
-                              if (filtered.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 70),
-                                  child: Center(
-                                    child: Text(
-                                      'No matching support tickets.',
-                                      style: TextStyle(color: Colors.white60),
-                                    ),
+                            ),
+                            SizedBox(height: ResponsiveUtility.height(10)),
+                            _filters(all),
+                            SizedBox(height: ResponsiveUtility.height(14)),
+                            if (filtered.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 70),
+                                child: Center(
+                                  child: Text(
+                                    'No matching support tickets.',
+                                    style: TextStyle(color: Colors.white60),
                                   ),
-                                )
-                              else
-                                ...filtered.map(
-                                  (ticket) => SupportTicketCard(
-                                    ticket: ticket,
-                                    unreadCount: ticket.adminUnreadCount,
-                                    showOwner: true,
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => TicketChatScreen(
-                                          ticketId: ticket.ticketId,
-                                          actor: _actor!,
-                                          showAdminActions: true,
-                                        ),
+                                ),
+                              )
+                            else
+                              ...filtered.map(
+                                (ticket) => SupportTicketCard(
+                                  ticket: ticket,
+                                  unreadCount: ticket.adminUnreadCount,
+                                  showOwner: true,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => TicketChatScreen(
+                                        ticketId: ticket.ticketId,
+                                        actor: _actor!,
+                                        showAdminActions: true,
                                       ),
                                     ),
                                   ),
                                 ),
-                            ],
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -163,7 +161,7 @@ class _AdminSupportDisputesScreenState extends State<AdminSupportDisputesScreen>
   Widget _header(ScalingUtility scale) => Container(
     padding: EdgeInsets.fromLTRB(
       scale.getScaledWidth(10),
-      scale.getScaledHeight(8),
+      scale.getScaledHeight(60),
       scale.getScaledWidth(12),
       scale.getScaledHeight(12),
     ),

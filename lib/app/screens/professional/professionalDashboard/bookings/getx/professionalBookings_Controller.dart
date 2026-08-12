@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:clicknow_version2/app/services/booking/booking_service.dart';
 import 'package:clicknow_version2/app/services/payments/razorpay_payment_service.dart';
 import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -53,6 +54,9 @@ class ProfessionalBookingItem {
     required this.bookingDuration,
     required this.statusCode,
     required this.lifecycleStatus,
+    required this.reschedulePending,
+    required this.rescheduleRequestedSchedule,
+    required this.rescheduleReason,
     required this.status,
   });
 
@@ -89,6 +93,9 @@ class ProfessionalBookingItem {
   final int bookingDuration;
   final String statusCode;
   final String lifecycleStatus;
+  final bool reschedulePending;
+  final String rescheduleRequestedSchedule;
+  final String rescheduleReason;
   final ProfessionalBookingStatus status;
 
   bool get canAccept => statusCode == 'ASSIGNED';
@@ -110,6 +117,11 @@ class ProfessionalBookingItem {
     final statusCode = _statusCodeFromRecord(record);
     final status = _statusFromCode(statusCode);
     final dateLabel = _dateTimeLabel(record.eventDate, record.eventTime);
+    final reschedule = _asMap(record.rescheduleRequest);
+    final reschedulePending =
+        _string(reschedule['status']).toLowerCase() == 'pending';
+    final rescheduleDate = _asDateTime(reschedule['newEventDate']);
+    final rescheduleTime = _string(reschedule['newEventTime']);
     final payment = record.paymentStatus.isEmpty
         ? 'Payment: pending'
         : 'Payment: ${record.paymentStatus}';
@@ -142,12 +154,17 @@ class ProfessionalBookingItem {
       refundPercentage: 0,
       paymentStatusLabel: payment,
       amountWithGst:
-          'Rs. ${_formatAmount(record.professionalPayoutAmount)} expected payout',
+          'Rs. ${_formatAmount(record.professionalPayoutAmount)} expected payout for $duration hours',
       bookingStartTime: record.bookingStartTime,
       bookingEndTime: record.bookingEndTime,
       bookingDuration: record.bookingDuration,
       statusCode: statusCode,
       lifecycleStatus: record.lifecycleStatus.toLowerCase().trim(),
+      reschedulePending: reschedulePending,
+      rescheduleRequestedSchedule: reschedulePending
+          ? _dateTimeLabel(rescheduleDate, rescheduleTime)
+          : '',
+      rescheduleReason: _string(reschedule['reason']),
       status: status,
     );
   }
@@ -244,6 +261,23 @@ class ProfessionalBookingItem {
     }
     return buffer.toString();
   }
+}
+
+String _string(dynamic value) => value?.toString().trim() ?? '';
+
+Map<String, dynamic> _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map((key, val) => MapEntry(key.toString(), val));
+  }
+  return <String, dynamic>{};
+}
+
+DateTime? _asDateTime(dynamic value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value.trim());
+  return null;
 }
 
 class ProfessionalBookingsController extends GetxController {

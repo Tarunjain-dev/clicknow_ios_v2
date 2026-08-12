@@ -23,6 +23,7 @@ class CustomerBottomNavBar extends StatelessWidget {
 
     return SafeArea(
       top: false,
+      bottom: false,
       child: Scaffold(
         backgroundColor: isDark ? Colors.black : Colors.white,
         body: Obx(

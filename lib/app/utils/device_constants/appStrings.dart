@@ -3,8 +3,8 @@ class AppStrings{
 
   /// -- OnBoarding Title
   static const String onboardingTitle1 = "Discover Artists for Every Moment";
-  static const String onboardingTitle2 = "Book the Right Artist, Stress-Free";
-  static const String onboardingTitle3 = "From Search to Showtime, All in One App";
+  static const String onboardingTitle2 = "Book the Right Artist,\nStress-Free";
+  static const String onboardingTitle3 = "From Search to Showtime,\nAll in One App";
   static const String onboardingTitle4 = "For Artists Who Want More Opportunities";
 
   /// -- OnBoarding Description

@@ -19,12 +19,22 @@ class AuthController extends GetxController {
   static const String hideGuestCtaStorageKey = 'hideGuestCTA';
   static const String hideProfessionalCtaStorageKey = 'hideProfessionalCTA';
   static const String rbacSessionUidStorageKey = 'rbacSessionUid';
-  static const String customerProfileCompletedStorageKey = 'customerProfileCompleted';
+  static const String customerProfileCompletedStorageKey =
+      'customerProfileCompleted';
   static const String rbacRoleStorageKey = 'rbacRole';
   static const String approvalStatusStorageKey = 'approvalStatus';
-  static const String professionalOnboardedStorageKey = 'isProfessionalOnboarded';
+  static const String professionalOnboardedStorageKey =
+      'isProfessionalOnboarded';
   static const String professionalProfileStorageKey = 'hasProfessionalProfile';
   static const String loginIntentStorageKey = 'authLoginIntent';
+
+  // Keys for persisting pending OTP state across iOS reCAPTCHA return-flow.
+  static const String pendingOtpFlagKey = 'pendingOtpFlag';
+  static const String pendingVerificationIdKey = 'pendingVerificationId';
+  static const String pendingPhoneKey = 'pendingPhone';
+  // Set BEFORE verifyPhoneNumber is called so hasPendingOtp is true while
+  // reCAPTCHA is open (codeSent fires only after the browser returns).
+  static const String pendingOtpInFlightKey = 'pendingOtpInFlight';
 
   static AuthController get instance {
     if (Get.isRegistered<AuthController>()) {
@@ -84,6 +94,7 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    debugPrint('[AuthController] onInit — boot');
     isGuestUser.value = _storage.read(guestUserStorageKey) == true;
     if (_auth.currentUser == null) {
       _clearLocalRbacCache(
@@ -93,8 +104,87 @@ class AuthController extends GetxController {
     }
     _restoreLoginIntent();
     _restoreCachedRbacState();
+    _restorePendingOtpState();
     _loadAuthSectionVisibility();
     unawaited(_configurePhoneAuthSettings());
+  }
+
+  /// Restores verificationId + phone from storage after iOS reCAPTCHA return.
+  void _restorePendingOtpState() {
+    final isPending = _storage.read(pendingOtpFlagKey) == true;
+    if (!isPending) return;
+
+    final storedVerificationId =
+        (_storage.read(pendingVerificationIdKey) as String?)?.trim();
+    final storedPhone = (_storage.read(pendingPhoneKey) as String?)?.trim();
+
+    if (storedVerificationId == null ||
+        storedVerificationId.isEmpty ||
+        storedPhone == null ||
+        storedPhone.isEmpty) {
+      debugPrint(
+        '[AuthController] pendingOtp flag set but data missing — clearing.',
+      );
+      _clearPendingOtpStorage();
+      return;
+    }
+
+    debugPrint(
+      '[AuthController] Restoring pending OTP state — phone=$storedPhone '
+      'verificationId=${storedVerificationId.substring(0, storedVerificationId.length.clamp(0, 8))}…',
+    );
+
+    _verificationId = storedVerificationId;
+    // Restore the 10-digit local part into the phone controller.
+    final localPart = storedPhone.startsWith('+91') && storedPhone.length >= 13
+        ? storedPhone.substring(3)
+        : storedPhone;
+    phoneController.text = localPart;
+    showOtp.value = true;
+    _hideAuthEntrySectionsForCurrentAttempt();
+    // Restart the resend timer so the UI is consistent.
+    _startResendTimer();
+  }
+
+  /// Returns true when there is a valid pending OTP waiting for the user,
+  /// OR when verifyPhoneNumber has been called but codeSent has not yet fired
+  /// (i.e. the reCAPTCHA browser is open on iOS).
+  static bool get hasPendingOtp {
+    final storage = GetStorage();
+    // Full pending state: verificationId received, OTP screen should be shown.
+    if (storage.read(pendingOtpFlagKey) == true &&
+        (storage.read(pendingVerificationIdKey) as String? ?? '').isNotEmpty &&
+        (storage.read(pendingPhoneKey) as String? ?? '').isNotEmpty) {
+      return true;
+    }
+    // In-flight state: verifyPhoneNumber called, reCAPTCHA open, codeSent not
+    // yet fired. Phone is stored so we know which number is being verified.
+    if (storage.read(pendingOtpInFlightKey) == true &&
+        (storage.read(pendingPhoneKey) as String? ?? '').isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  void _persistPendingOtpState({
+    required String verificationId,
+    required String phoneNumber,
+  }) {
+    _storage.write(pendingOtpFlagKey, true);
+    _storage.write(pendingVerificationIdKey, verificationId);
+    _storage.write(pendingPhoneKey, phoneNumber);
+    debugPrint(
+      '[AuthController] Persisted pending OTP — phone=$phoneNumber '
+      'verificationId=${verificationId.substring(0, verificationId.length.clamp(0, 8))}…',
+    );
+  }
+
+  void _clearPendingOtpStorage() {
+    _storage.remove(pendingOtpFlagKey);
+    _storage.remove(pendingVerificationIdKey);
+    _storage.remove(pendingPhoneKey);
+    _storage.remove(pendingOtpInFlightKey);
+    debugPrint('[AuthController] Cleared pending OTP storage.');
   }
 
   static bool get isGuestModeActive {
@@ -202,7 +292,11 @@ class AuthController extends GetxController {
     _storage.remove(approvalStatusStorageKey);
     _storage.remove(professionalOnboardedStorageKey);
     _storage.remove(professionalProfileStorageKey);
-    _storage.remove(loginIntentStorageKey);
+    // Do not remove loginIntentStorageKey when a pending OTP is in progress —
+    // the role must survive the iOS reCAPTCHA round-trip.
+    if (!hasPendingOtp) {
+      _storage.remove(loginIntentStorageKey);
+    }
     if (clearAuthUiFlags) {
       _storage.remove(hideGuestCtaStorageKey);
       _storage.remove(hideProfessionalCtaStorageKey);
@@ -225,6 +319,7 @@ class AuthController extends GetxController {
     otpLockSecondsLeft.value = 0;
     _verificationId = null;
     _resendToken = null;
+    _clearPendingOtpStorage();
     if (clearPhone) {
       phoneController.clear();
     }
@@ -377,7 +472,16 @@ class AuthController extends GetxController {
   }
 
   Future<void> requestOtp() async {
-    _setLoginIntent(RbacDecision.roleCustomer);
+    if (isLoading.value || hasPendingOtp) {
+      AppSnackbar.info(
+        "OTP Pending",
+        "Please wait for the current OTP request.",
+      );
+      return;
+    }
+    if (loginIntent.value != RbacDecision.roleProfessional) {
+      _setLoginIntent(RbacDecision.roleCustomer);
+    }
     final phone = phoneController.text.trim();
     if (phone.length != 10) {
       AppSnackbar.error(
@@ -388,6 +492,7 @@ class AuthController extends GetxController {
     }
 
     final fullPhone = RbacService.normalizePhone("+91$phone");
+    debugPrint('[AuthController] requestOtp — phone=$fullPhone');
     try {
       isLoading.value = true;
       _otpRoleDecision = await RbacService.resolveByPhone(fullPhone);
@@ -402,7 +507,9 @@ class AuthController extends GetxController {
 
   Future<void> resendOtp() async {
     if (secondsLeft.value > 0 || isOtpLocked || isLoading.value) return;
-    _setLoginIntent(RbacDecision.roleCustomer);
+    if (loginIntent.value != RbacDecision.roleProfessional) {
+      _setLoginIntent(RbacDecision.roleCustomer);
+    }
 
     final phone = phoneController.text.trim();
     if (phone.length != 10) {
@@ -414,6 +521,7 @@ class AuthController extends GetxController {
     }
 
     final fullPhone = RbacService.normalizePhone("+91$phone");
+    debugPrint('[AuthController] resendOtp — phone=$fullPhone');
     try {
       isLoading.value = true;
       _otpRoleDecision = await RbacService.resolveByPhone(fullPhone);
@@ -430,27 +538,20 @@ class AuthController extends GetxController {
     if (_phoneAuthSettingsConfigured || kIsWeb) {
       return;
     }
-    if (defaultTargetPlatform != TargetPlatform.android) {
-      _phoneAuthSettingsConfigured = true;
-      return;
-    }
-    const forceRecaptchaInDebug = bool.fromEnvironment(
-      'FORCE_RECAPTCHA_OTP_DEBUG',
-      defaultValue: true,
-    );
-    const forceRecaptchaInRelease = bool.fromEnvironment(
-      'FORCE_RECAPTCHA_OTP_RELEASE',
-      defaultValue: false,
-    );
-    final shouldForceRecaptcha = kReleaseMode
-        ? forceRecaptchaInRelease
-        : forceRecaptchaInDebug;
     try {
-      await _auth.setSettings(forceRecaptchaFlow: shouldForceRecaptcha);
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        // Android: never force reCAPTCHA flow.
+        await _auth.setSettings(forceRecaptchaFlow: false);
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        // iOS debug/profile: disable the reCAPTCHA browser entirely.
+        // Firebase will send a real SMS without showing the browser.
+        // In release, APNs silent push handles verification without reCAPTCHA.
+        if (!kReleaseMode) {
+          await _auth.setSettings(appVerificationDisabledForTesting: true);
+        }
+      }
       _phoneAuthSettingsConfigured = true;
-      debugPrint(
-        'FirebaseAuth phone settings configured: forceRecaptchaFlow=$shouldForceRecaptcha',
-      );
+      debugPrint('FirebaseAuth phone settings configured');
     } catch (e) {
       debugPrint('Failed to configure FirebaseAuth phone settings: $e');
     }
@@ -566,27 +667,52 @@ class AuthController extends GetxController {
       }
 
       final timeout = _firebasePhoneAutoRetrievalTimeout;
+      debugPrint(
+        '[AuthController] verifyPhoneNumber start — phone=$phoneNumber',
+      );
+      // Mark in-flight BEFORE calling verifyPhoneNumber so that if iOS opens
+      // reCAPTCHA and the app is briefly backgrounded/foregrounded, the splash
+      // screen sees hasPendingOtp == true and does not interrupt the flow.
+      _storage.write(pendingOtpInFlightKey, true);
+      _storage.write(pendingPhoneKey, phoneNumber);
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: timeout,
         forceResendingToken: isResend ? _resendToken : null,
         verificationCompleted: (PhoneAuthCredential credential) async {
+          debugPrint('[AuthController] verificationCompleted (auto-verify)');
           try {
+            _clearPendingOtpStorage();
             await _handleCredential(
               credential,
               phoneNumber: phoneNumber,
               preResolvedDecision: _otpRoleDecision,
             );
           } catch (e) {
-            debugPrint('Auto OTP verification callback failed: $e');
+            debugPrint(
+              '[AuthController] Auto OTP verification callback failed: $e',
+            );
           }
         },
         verificationFailed: (FirebaseAuthException e) {
-          AppSnackbar.error("OTP Failed", e.message ?? "Unable to send OTP.");
+          debugPrint(
+            '[AuthController] verificationFailed — code=${e.code} message=${e.message}',
+          );
+          _clearPendingOtpStorage();
+          isLoading.value = false;
+          AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
         },
         codeSent: (String verificationId, int? resendToken) {
+          debugPrint(
+            '[AuthController] codeSent — verificationId=${verificationId.substring(0, verificationId.length.clamp(0, 8))}…',
+          );
           _verificationId = verificationId;
           _resendToken = resendToken;
+          // Persist before any navigation so iOS reCAPTCHA return can restore.
+          _persistPendingOtpState(
+            verificationId: verificationId,
+            phoneNumber: phoneNumber,
+          );
           for (final controller in otpControllers) {
             controller.clear();
           }
@@ -598,6 +724,10 @@ class AuthController extends GetxController {
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           _verificationId = verificationId;
+          // Keep storage in sync with the refreshed verificationId.
+          if (_storage.read(pendingOtpFlagKey) == true) {
+            _storage.write(pendingVerificationIdKey, verificationId);
+          }
           if (timeout.inSeconds > 0 && showOtp.value) {
             AppSnackbar.info(
               "Auto-read unavailable",
@@ -607,13 +737,24 @@ class AuthController extends GetxController {
         },
       );
     } on FirebaseAuthException catch (e) {
-      AppSnackbar.error("OTP Failed", e.message ?? "Unable to send OTP.");
+      debugPrint(
+        '[AuthController] verifyPhoneNumber exception — code=${e.code} message=${e.message}',
+      );
+      _clearPendingOtpStorage();
+      AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
     } catch (e) {
       debugPrint('verifyPhoneNumber failed: $e');
       AppSnackbar.error("OTP Failed", "Unable to send OTP right now.");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String _phoneAuthFailureMessage(FirebaseAuthException error) {
+    if (error.code == 'missing-client-identifier') {
+      return "Phone verification could not start. Please restart the app and try again.";
+    }
+    return error.message ?? "Unable to send OTP.";
   }
 
   void _startOtpAutoFillListener() {
@@ -714,6 +855,10 @@ class AuthController extends GetxController {
       return;
     }
 
+    debugPrint(
+      '[AuthController] Signed in — uid=${user.uid} phone=$phoneNumber',
+    );
+    _clearPendingOtpStorage();
     _setGuestMode(false);
     failedOtpAttempts.value = 0;
     otpLockSecondsLeft.value = 0;
@@ -725,7 +870,7 @@ class AuthController extends GetxController {
       requestedRole: loginIntent.value,
     );
     _setLoginIntent(decision.role);
-    _applyDecisionToState(decision, persistLocal: true);
+    await _applyDecisionToState(decision, persistLocal: true);
     await _upsertUser(user, phoneNumber: phoneNumber, decision: decision);
     _clearOtpFields();
     await _navigateByDecision(decision);
@@ -957,6 +1102,7 @@ class AuthController extends GetxController {
     _resendToken = null;
     _confirmationResult = null;
     _otpRoleDecision = null;
+    _clearPendingOtpStorage();
   }
 
   Future<void> _navigateByDecision(RbacDecision decision) async {

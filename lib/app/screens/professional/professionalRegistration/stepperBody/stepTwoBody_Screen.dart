@@ -21,7 +21,8 @@ class StepTwoBodyScreen extends StatefulWidget {
 
 class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
   final _formKey = GlobalKey<FormState>();
-  final professionalRegController = Get.find<ProfessionalRegistrationController>();
+  final professionalRegController =
+      Get.find<ProfessionalRegistrationController>();
   final stepperController = Get.find<StepperController>();
 
   @override
@@ -43,7 +44,10 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
     if (selectedLatitude != null && selectedLongitude != null) {
       initialSelection = AddressSelection(
-        formattedAddress: professionalRegController.permanentAddressController.text.trim(),
+        formattedAddress: professionalRegController
+            .permanentAddressController
+            .text
+            .trim(),
         state: professionalRegController.selectedState.value,
         city: professionalRegController.selectedCity.value,
         pincode: professionalRegController.selectedPincode.value,
@@ -54,8 +58,10 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
     final pickedLocation = await Get.to<AddressSelection>(
       () => ProfessionalLocationPickerScreen(
-        initialCenterLatitude: professionalRegController.mapCenterLatitude.value,
-        initialCenterLongitude: professionalRegController.mapCenterLongitude.value,
+        initialCenterLatitude:
+            professionalRegController.mapCenterLatitude.value,
+        initialCenterLongitude:
+            professionalRegController.mapCenterLongitude.value,
         initialSelection: initialSelection,
       ),
       fullscreenDialog: true,
@@ -72,29 +78,44 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     /// -- Dark mode instance
     final isDark = HelperFunctions.isDarkMode(context);
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: ResponsiveUtility.only(top: 16, right: 16, left: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+      padding: ResponsiveUtility.only(
+        top: 16,
+        right: 16,
+        left: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
           children: [
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
-                color: isDark ? Color(0xff1C1736).withValues(alpha: 0.5) : Color(0xffFCFBFF),
-                border:Border.all(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
+                borderRadius: BorderRadius.circular(
+                  ResponsiveUtility.radius(10),
+                ),
+                color: isDark
+                    ? Color(0xff1C1736).withValues(alpha: 0.5)
+                    : Color(0xffFCFBFF),
+                border: Border.all(
+                  color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   /// Step 2 Title and Description
                   Padding(
-                    padding: ResponsiveUtility.only(top: 10, right: 10, left: 10, bottom: 4),
+                    padding: ResponsiveUtility.only(
+                      top: 10,
+                      right: 10,
+                      left: 10,
+                      bottom: 4,
+                    ),
                     child: Text(
                       "Tell Us About Yourself",
                       style: TextStyle(
@@ -108,55 +129,112 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                     padding: ResponsiveUtility.symmetric(horizontal: 10),
                     child: Text(
                       "Help us Know you better with some basic information.",
-                      style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.6) : Colors.black.withValues(alpha: 0.6), fontSize: ResponsiveUtility.fontSize(12),),
+                      style: TextStyle(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.6)
+                            : Colors.black.withValues(alpha: 0.6),
+                        fontSize: ResponsiveUtility.fontSize(12),
+                      ),
                     ),
                   ),
-                  Divider(color:  isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), thickness: 1),
+                  Divider(
+                    color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+                    thickness: 1,
+                  ),
 
                   Padding(
                     padding: ResponsiveUtility.all(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
                         /// FULL NAME
-                        Text("Full Name", style: TextStyle(color: isDark ? Colors.white : Colors.black,),),
+                        Text(
+                          "Full Name",
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
                         SizedBox(height: ResponsiveUtility.height(2)),
                         TextFormField(
                           controller: professionalRegController.nameController,
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black,),
-                          decoration: _inputDecoration("Enter your full name", isDark),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                          decoration: _inputDecoration(
+                            "Enter your full name",
+                            isDark,
+                          ),
                         ),
                         SizedBox(height: ResponsiveUtility.height(10)),
 
                         /// GENDER DROPDOWN
-                        Text("Gender", style: TextStyle(color: isDark ? Colors.white : Colors.black),),
+                        Text(
+                          "Gender",
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
                         SizedBox(height: ResponsiveUtility.height(2)),
                         Theme(
-                          data: Theme.of(context,).copyWith(hintColor: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6)),
+                          data: Theme.of(context).copyWith(
+                            hintColor: isDark
+                                ? Colors.white54
+                                : Colors.black.withValues(alpha: 0.6),
+                          ),
                           child: Obx(
                             () => DropdownButtonFormField<String>(
-                              initialValue: professionalRegController.selectedGender.value.isEmpty ? null : professionalRegController.selectedGender.value,
-                              dropdownColor: isDark ? Color(0xff1C1736) : Colors.white,
-                              style: TextStyle(fontSize: ResponsiveUtility.fontSize(14),),
+                              initialValue:
+                                  professionalRegController
+                                      .selectedGender
+                                      .value
+                                      .isEmpty
+                                  ? null
+                                  : professionalRegController
+                                        .selectedGender
+                                        .value,
+                              dropdownColor: isDark
+                                  ? Color(0xff1C1736)
+                                  : Colors.white,
+                              style: TextStyle(
+                                fontSize: ResponsiveUtility.fontSize(14),
+                              ),
                               items: professionalRegController.genderOptions
                                   .map(
                                     (gender) => DropdownMenuItem(
                                       value: gender,
-                                      child: Text(gender, style: TextStyle(color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),),),
+                                      child: Text(
+                                        gender,
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black.withValues(
+                                                  alpha: 0.6,
+                                                ),
+                                        ),
+                                      ),
                                     ),
-                                  ).toList(),
+                                  )
+                                  .toList(),
                               onChanged: (value) {
-                                professionalRegController.selectedGender.value = value ?? "";
+                                professionalRegController.selectedGender.value =
+                                    value ?? "";
                               },
-                              decoration: _inputDecoration("Select gender", isDark),
+                              decoration: _inputDecoration(
+                                "Select gender",
+                                isDark,
+                              ),
                             ),
                           ),
                         ),
                         SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// DATE OF BIRTH
-                        Text("Date of Birth", style: TextStyle(color: isDark ? Colors.white : Colors.black,),),
+                        Text(
+                          "Date of Birth",
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
                         SizedBox(height: ResponsiveUtility.height(6)),
                         Obx(
                           () => InkWell(
@@ -166,27 +244,46 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                                 initialDate: DateTime(2000),
                                 firstDate: DateTime(1950),
                                 lastDate: DateTime.now(),
-                                barrierColor: Colors.black.withValues(alpha: 0.6),
+                                barrierColor: Colors.black.withValues(
+                                  alpha: 0.6,
+                                ),
                               );
                               if (picked != null) {
-                                professionalRegController.selectedDob.value = picked;
+                                professionalRegController.selectedDob.value =
+                                    picked;
                               }
                             },
                             child: Container(
-                              padding: ResponsiveUtility.symmetric(horizontal: 14, vertical: 12),
+                              padding: ResponsiveUtility.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
                               decoration: _containerDecoration(isDark),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.calendar_month,
-                                    color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black.withValues(alpha: 0.6),
                                   ),
                                   SizedBox(width: ResponsiveUtility.width(10)),
                                   Text(
-                                    professionalRegController.selectedDob.value == null
-                                    ? "Select date of birth"
-                                    : DateFormat("dd MMM yyyy").format(professionalRegController.selectedDob.value!,),
-                                    style: TextStyle(color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),),
+                                    professionalRegController
+                                                .selectedDob
+                                                .value ==
+                                            null
+                                        ? "Select date of birth"
+                                        : DateFormat("dd MMM yyyy").format(
+                                            professionalRegController
+                                                .selectedDob
+                                                .value!,
+                                          ),
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.black.withValues(alpha: 0.6),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -196,17 +293,31 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                         SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// PERMANENT ADDRESS
-                        Text("Permanent Address", style: TextStyle(color: isDark ? Colors.white : Colors.black),),
+                        Text(
+                          "Permanent Address",
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
                         SizedBox(height: ResponsiveUtility.height(6)),
                         Obx(
                           () => LocationSearchField(
-                            controller: professionalRegController.permanentAddressController,
-                            onChanged: professionalRegController.onAddressSearchChanged,
-                            onSuggestionTap: professionalRegController.selectAddressSuggestion,
-                            suggestions: professionalRegController.placeSuggestions,
-                            isSearching: professionalRegController.isSearchingPlaces.value,
-                            onUseCurrentLocation: professionalRegController.useCurrentLocationForAddress,
-                            isFetchingCurrentLocation: professionalRegController.isFetchingCurrentLocation.value,
+                            controller: professionalRegController
+                                .permanentAddressController,
+                            onChanged: professionalRegController
+                                .onAddressSearchChanged,
+                            onSuggestionTap: professionalRegController
+                                .selectAddressSuggestion,
+                            suggestions:
+                                professionalRegController.placeSuggestions,
+                            isSearching: professionalRegController
+                                .isSearchingPlaces
+                                .value,
+                            onUseCurrentLocation: professionalRegController
+                                .useCurrentLocationForAddress,
+                            isFetchingCurrentLocation: professionalRegController
+                                .isFetchingCurrentLocation
+                                .value,
                             isDark: isDark,
                           ),
                         ),
@@ -214,40 +325,75 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
                         Obx(
                           () => AddressPreviewCard(
-                            formattedAddress: professionalRegController.permanentAddressController.text,
+                            formattedAddress: professionalRegController
+                                .permanentAddressController
+                                .text,
                             city: professionalRegController.selectedCity.value,
-                            state: professionalRegController.selectedState.value,
-                            country: professionalRegController.selectedCountry.value,
-                            pincode: professionalRegController.selectedPincode.value,
-                            latitude: professionalRegController.selectedLatitude.value,
-                            longitude: professionalRegController.selectedLongitude.value,
+                            state:
+                                professionalRegController.selectedState.value,
+                            country:
+                                professionalRegController.selectedCountry.value,
+                            pincode:
+                                professionalRegController.selectedPincode.value,
+                            latitude: professionalRegController
+                                .selectedLatitude
+                                .value,
+                            longitude: professionalRegController
+                                .selectedLongitude
+                                .value,
                           ),
                         ),
                         SizedBox(height: ResponsiveUtility.height(16)),
 
                         Obx(
                           () => MapPickerWidget(
-                            centerLatitude: professionalRegController.mapCenterLatitude.value,
-                            centerLongitude: professionalRegController.mapCenterLongitude.value,
-                            selectedLatitude: professionalRegController.selectedLatitude.value,
-                            selectedLongitude: professionalRegController.selectedLongitude.value,
-                            isResolvingAddress: professionalRegController.isResolvingAddressFromMap.value,
-                            onLocationChanged: (double latitude, double longitude,) {
-                              return professionalRegController.onMapLocationChanged(latitude: latitude, longitude: longitude,);
-                            },
-                            onConfirmLocation: professionalRegController.confirmSelectedLocation,
-                            canConfirmLocation: professionalRegController.hasSelectedLocation,
-                            showMap: professionalRegController.isMapApiConfigured,
+                            centerLatitude: professionalRegController
+                                .mapCenterLatitude
+                                .value,
+                            centerLongitude: professionalRegController
+                                .mapCenterLongitude
+                                .value,
+                            selectedLatitude: professionalRegController
+                                .selectedLatitude
+                                .value,
+                            selectedLongitude: professionalRegController
+                                .selectedLongitude
+                                .value,
+                            isResolvingAddress: professionalRegController
+                                .isResolvingAddressFromMap
+                                .value,
+                            onLocationChanged:
+                                (double latitude, double longitude) {
+                                  return professionalRegController
+                                      .onMapLocationChanged(
+                                        latitude: latitude,
+                                        longitude: longitude,
+                                      );
+                                },
+                            onConfirmLocation: professionalRegController
+                                .confirmSelectedLocation,
+                            canConfirmLocation:
+                                professionalRegController.hasSelectedLocation,
+                            showMap:
+                                professionalRegController.isMapApiConfigured,
                             fallbackMessage:
                                 "Google Maps API key is missing.\n"
                                 "Please set ApiConstants.googleMapsApiKey.",
-                            onOpenExpandedMap: professionalRegController.isMapApiConfigured ? _openLargeMapPicker : null,
+                            onOpenExpandedMap:
+                                professionalRegController.isMapApiConfigured
+                                ? _openLargeMapPicker
+                                : null,
                           ),
                         ),
                         SizedBox(height: ResponsiveUtility.height(16)),
 
                         /// LANGUAGES
-                        Text("Languages Known", style: TextStyle(color: isDark ? AppColors.white : Colors.black),),
+                        Text(
+                          "Languages Known",
+                          style: TextStyle(
+                            color: isDark ? AppColors.white : Colors.black,
+                          ),
+                        ),
                         SizedBox(height: ResponsiveUtility.height(6)),
 
                         Container(
@@ -264,23 +410,38 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                                     .languageOptions
                                     .map((lang) {
                                       return Obx(() {
-                                        bool isSelected = professionalRegController.selectedLanguages.contains(lang);
+                                        bool isSelected =
+                                            professionalRegController
+                                                .selectedLanguages
+                                                .contains(lang);
                                         return GestureDetector(
-                                          onTap: () => professionalRegController.toggleLanguage(lang),
+                                          onTap: () => professionalRegController
+                                              .toggleLanguage(lang),
                                           child: Container(
-                                            padding: ResponsiveUtility.symmetric(horizontal: 14, vertical: 6),
+                                            padding:
+                                                ResponsiveUtility.symmetric(
+                                                  horizontal: 14,
+                                                  vertical: 6,
+                                                ),
                                             decoration: BoxDecoration(
-                                              color: isSelected ?
-                                              isDark ? AppColors.purple3 : Color(0xff9810FA) :
-                                              isDark ? Color(0xff2A2E3F) : Colors.white,
-                                              borderRadius: BorderRadius.circular(20),
+                                              color: isSelected
+                                                  ? isDark
+                                                        ? AppColors.purple3
+                                                        : Color(0xff9810FA)
+                                                  : isDark
+                                                  ? Color(0xff2A2E3F)
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                             ),
                                             child: Text(
                                               lang,
                                               style: TextStyle(
-                                                color: isSelected ?
-                                                Colors.white :
-                                                isDark ? Colors.white70 : Color(0xff6F5F5F),
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : isDark
+                                                    ? Colors.white70
+                                                    : Color(0xff6F5F5F),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -293,27 +454,53 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
 
                               /// Divider + Selected Text
                               Obx(() {
-                                if (professionalRegController.selectedLanguages.isEmpty) {
+                                if (professionalRegController
+                                    .selectedLanguages
+                                    .isEmpty) {
                                   return const SizedBox();
                                 }
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(height: ResponsiveUtility.height(10)),
-                                    Divider(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
-                                    SizedBox(height: ResponsiveUtility.height(8)),
+                                    SizedBox(
+                                      height: ResponsiveUtility.height(10),
+                                    ),
+                                    Divider(
+                                      color: isDark
+                                          ? Color(0xff1E2939)
+                                          : Color(0xffD9D9D9),
+                                    ),
+                                    SizedBox(
+                                      height: ResponsiveUtility.height(8),
+                                    ),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text("Selected : ", style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.8,) : Colors.black.withValues(alpha: 0.6),),),
+                                        Text(
+                                          "Selected : ",
+                                          style: TextStyle(
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.8,
+                                                  )
+                                                : Colors.black.withValues(
+                                                    alpha: 0.6,
+                                                  ),
+                                          ),
+                                        ),
                                         Expanded(
                                           child: Text(
-                                            professionalRegController.selectedLanguages.join(", "),
+                                            professionalRegController
+                                                .selectedLanguages
+                                                .join(", "),
                                             maxLines: 3,
                                             softWrap: true,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(color: AppColors.primaryColor,),
+                                            style: const TextStyle(
+                                              color: AppColors.primaryColor,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -329,7 +516,10 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                   ),
 
                   /// -- back and Continue Buttons
-                  Divider(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9), height: 2),
+                  Divider(
+                    color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9),
+                    height: 2,
+                  ),
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -340,23 +530,34 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                       color: isDark ? Color(0xff101425) : Color(0xffF6F6F6),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0,
+                        vertical: 20.0,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-
                           /// -- Back Button
                           Expanded(
                             child: SizedBox(
                               height: ResponsiveUtility.height(40),
                               child: ElevatedButton(
-                                onPressed: () => stepperController.previousStep(),
+                                onPressed: () =>
+                                    stepperController.previousStep(),
                                 style: ElevatedButton.styleFrom(
                                   elevation: 0,
-                                  backgroundColor: isDark ? Color(0xff13182C) : Colors.white,
+                                  backgroundColor: isDark
+                                      ? Color(0xff13182C)
+                                      : Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadiusGeometry.circular(10),
-                                    side: BorderSide(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
+                                    borderRadius: BorderRadiusGeometry.circular(
+                                      10,
+                                    ),
+                                    side: BorderSide(
+                                      color: isDark
+                                          ? Color(0xff1E2939)
+                                          : Color(0xffD9D9D9),
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -364,16 +565,24 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                                   children: [
                                     Icon(
                                       Icons.arrow_back,
-                                      color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black.withValues(alpha: 0.6),
                                       size: 16,
                                     ),
                                     SizedBox(width: ResponsiveUtility.width(8)),
                                     Text(
                                       "Back",
                                       style: TextStyle(
-                                        color: isDark ? Colors.white : Colors.black.withValues(alpha: 0.6),
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black.withValues(
+                                                alpha: 0.6,
+                                              ),
                                         fontWeight: FontWeight.bold,
-                                        fontSize: ResponsiveUtility.fontSize(14),
+                                        fontSize: ResponsiveUtility.fontSize(
+                                          14,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -388,28 +597,38 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
                             child: SizedBox(
                               height: ResponsiveUtility.height(40),
                               child: Obx(() {
-                                final canContinue = professionalRegController.hasSelectedLocation && !professionalRegController.isResolvingAddressFromMap.value;
+                                final canContinue =
+                                    professionalRegController.canContinueStep2;
 
                                 return ElevatedButton(
                                   onPressed: !canContinue
                                       ? null
                                       : () async {
-                                          if (professionalRegController.validateStep2()) {
-                                            await professionalRegController.saveDraftForStep(1);
-                                            await professionalRegController.saveStep2ProfileToFirestore();
-                                            await stepperController.completeStepAndContinue(1);
+                                          if (professionalRegController
+                                              .validateStep2()) {
+                                            await professionalRegController
+                                                .saveDraftForStep(1);
+                                            await professionalRegController
+                                                .saveStep2ProfileToFirestore();
+                                            await stepperController
+                                                .completeStepAndContinue(1);
                                           }
                                         },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
+                                    backgroundColor: isDark
+                                        ? Colors.white
+                                        : AppColors.primaryColor,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadiusGeometry.circular(10,),
+                                      borderRadius:
+                                          BorderRadiusGeometry.circular(10),
                                     ),
                                   ),
                                   child: Text(
                                     "Continue",
                                     style: TextStyle(
-                                      color: isDark ? AppColors.purple3 : Colors.white,
+                                      color: isDark
+                                          ? AppColors.purple3
+                                          : Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: ResponsiveUtility.fontSize(14),
                                     ),
@@ -434,7 +653,9 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
   InputDecoration _inputDecoration(String hint, bool isDark) {
     return InputDecoration(
       filled: true,
-      fillColor: isDark ? Color(0xff1C1736).withValues(alpha: 0.5) : Color(0xffF6F4FF).withValues(alpha: 0.8),
+      fillColor: isDark
+          ? Color(0xff1C1736).withValues(alpha: 0.5)
+          : Color(0xffF6F4FF).withValues(alpha: 0.8),
       hintText: hint,
       hintStyle: TextStyle(
         color: isDark ? Colors.white54 : Colors.black.withValues(alpha: 0.6),
@@ -461,14 +682,16 @@ class _StepTwoBodyScreenState extends State<StepTwoBodyScreen> {
           width: 1.2,
         ),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
   BoxDecoration _containerDecoration(bool isDark) {
     return BoxDecoration(
       borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
-      color: isDark ? Color(0xff1C1736).withValues(alpha: 0.8) : Color(0xffF6F4FF).withValues(alpha: 0.8),
+      color: isDark
+          ? Color(0xff1C1736).withValues(alpha: 0.8)
+          : Color(0xffF6F4FF).withValues(alpha: 0.8),
       border: Border.all(color: isDark ? Color(0xff1E2939) : Color(0xffD9D9D9)),
     );
   }

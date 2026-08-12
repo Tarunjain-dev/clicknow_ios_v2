@@ -20,8 +20,7 @@ class OnBoardingScreen extends StatelessWidget {
     /// -- Dark mode instance
     final isDark = HelperFunctions.isDarkMode(context);
 
-    return SafeArea(
-      child: Container(
+    return Container(
         height: double.maxFinite,
         width: double.maxFinite,
         decoration: BoxDecoration(
@@ -46,25 +45,24 @@ class OnBoardingScreen extends StatelessWidget {
               ),
 
               /// Skip Button
-              SkipButton(),
+              SkipButton(),//
 
               /// Dot Navigation : SmoothPage Indicator
               Positioned(
-                  bottom: ResponsiveUtility.height(40),
+                  bottom: ResponsiveUtility.height(46),
                   left: ResponsiveUtility.width(14),
                   child: OnBoardingDotIndicator(),
               ),
 
               /// -- Next Button
               Positioned(
-                bottom: ResponsiveUtility.height(20),
-                right: ResponsiveUtility.width(14),
+                bottom: ResponsiveUtility.height(26),
+                right: ResponsiveUtility.width(18),
                 child: OnBoardingNextButton(onBoardingController: onBoardingController,),
               ),
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -94,7 +92,7 @@ class OnBoardingNextButton extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              index == 3 ? "START" : "Next",
+              index == 3 ? "START" : "NEXT",
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: ResponsiveUtility.fontSize(14),
@@ -152,7 +150,7 @@ class SkipButton extends StatelessWidget {
     return Obx(() {
       final index = onBoardingController.currentPageIndex.value;
       return Positioned(
-        top: ResponsiveUtility.height(40),
+        top: ResponsiveUtility.height(60),
         right: ResponsiveUtility.width(12),
         child: SizedBox(
           height: ResponsiveUtility.height(30),
@@ -213,11 +211,11 @@ class OnBoardingPage extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-              fontSize: ResponsiveUtility.fontSize(20),
+              fontSize: ResponsiveUtility.fontSize(18),
               fontWeight: FontWeight.bold,
               color: isDark ? AppColors.white : AppColors.black,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
         SizedBox(height: ResponsiveUtility.height(8),),

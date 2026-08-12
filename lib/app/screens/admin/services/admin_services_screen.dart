@@ -23,63 +23,61 @@ class AdminServicesScreen extends StatelessWidget {
           scale: scale,
           activeRoute: AppRoutes.adminServicesRoute,
         ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _topSection(scale, controller),
-              _statsRow(scale, controller),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.black),
-                    );
-                  }
-
-                  if (controller.services.isEmpty) {
-                    return Center(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffFCFBFF),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xffD9D9D9)),
-                        ),
-                        child: const Text(
-                          'No services available right now.',
-                          style: TextStyle(color: Colors.black54),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: EdgeInsets.fromLTRB(
-                      scale.getScaledWidth(12),
-                      scale.getScaledHeight(12),
-                      scale.getScaledWidth(12),
-                      scale.getScaledHeight(16),
-                    ),
-                    itemCount: controller.services.length,
-                    itemBuilder: (context, index) {
-                      final service = controller.services[index];
-                      return Obx(() {
-                        final isExpanded = controller.isExpanded(service.id);
-                        return _serviceCard(
-                          context: context,
-                          scale: scale,
-                          controller: controller,
-                          service: service,
-                          isExpanded: isExpanded,
-                        );
-                      });
-                    },
+        body: Column(
+          children: [
+            _topSection(scale, controller),
+            _statsRow(scale, controller),
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.black),
                   );
-                }),
-              ),
-            ],
-          ),
+                }
+        
+                if (controller.services.isEmpty) {
+                  return Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xffFCFBFF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xffD9D9D9)),
+                      ),
+                      child: const Text(
+                        'No services available right now.',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    ),
+                  );
+                }
+        
+                return ListView.builder(
+                  padding: EdgeInsets.fromLTRB(
+                    scale.getScaledWidth(12),
+                    scale.getScaledHeight(12),
+                    scale.getScaledWidth(12),
+                    scale.getScaledHeight(16),
+                  ),
+                  itemCount: controller.services.length,
+                  itemBuilder: (context, index) {
+                    final service = controller.services[index];
+                    return Obx(() {
+                      final isExpanded = controller.isExpanded(service.id);
+                      return _serviceCard(
+                        context: context,
+                        scale: scale,
+                        controller: controller,
+                        service: service,
+                        isExpanded: isExpanded,
+                      );
+                    });
+                  },
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );
@@ -92,7 +90,7 @@ class AdminServicesScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),

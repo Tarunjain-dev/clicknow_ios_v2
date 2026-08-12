@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:clicknow_version2/app/routes/appRoutes.dart';
+import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
 import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
 import 'package:clicknow_version2/app/utils/device_utils/themes/appTheme.dart';
 import 'package:clicknow_version2/app/widgets/network_connectivity_guard.dart';
@@ -22,6 +22,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
+  debugPrint('[main] process start ${DateTime.now().toIso8601String()}');
   WidgetsFlutterBinding.ensureInitialized();
 
   await _runStartupStep(
@@ -39,28 +40,22 @@ void main() async {
   Object? firebaseInitializationError;
   StackTrace? firebaseInitializationStackTrace;
   try {
-    if (kDebugMode) {
-      debugPrint('Firebase Core initialization started.');
-    }
+    debugPrint('[main] Firebase init start');
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    if (kDebugMode) {
-      debugPrint('Firebase Core initialization succeeded.');
-    }
+    debugPrint('[main] Firebase init done');
   } catch (error, stackTrace) {
     firebaseInitializationError = error;
     firebaseInitializationStackTrace = stackTrace;
-    debugPrint('Firebase Core initialization failed: $error');
+    debugPrint('[main] Firebase init failed: $error');
     debugPrintStack(stackTrace: stackTrace);
   }
 
   NetworkGuardController.instance;
 
-  if (kDebugMode) {
-    debugPrint('runApp() called.');
-  }
+  debugPrint('[main] runApp');
   runApp(
     firebaseInitializationError == null
         ? const MyApp()
@@ -69,9 +64,7 @@ void main() async {
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (firebaseInitializationError != null) {
-      debugPrint(
-        'Optional services skipped because Firebase Core failed to initialize.',
-      );
+      debugPrint('[main] optional services skipped — Firebase failed');
       debugPrintStack(stackTrace: firebaseInitializationStackTrace);
       return;
     }
@@ -95,15 +88,11 @@ Future<void> _initializeOptionalServices() async {
   await _initializeFirebaseAppCheck();
 
   try {
-    if (kDebugMode) {
-      debugPrint('Notification initialization started.');
-    }
+    debugPrint('[main] FCM init start');
     await FcmNotificationService.instance.initialize();
-    if (kDebugMode) {
-      debugPrint('Notification initialization completed.');
-    }
+    debugPrint('[main] FCM init done');
   } catch (error, stackTrace) {
-    debugPrint('Notification initialization failed: $error');
+    debugPrint('[main] FCM init failed: $error');
     debugPrintStack(stackTrace: stackTrace);
   }
 }
@@ -113,42 +102,33 @@ Future<void> _initializeFirebaseAppCheck() async {
     'USE_APPCHECK_DEBUG',
     defaultValue: false,
   );
-  const allowReleaseDebugFallback = bool.fromEnvironment(
-    'ALLOW_APPCHECK_RELEASE_DEBUG_FALLBACK',
-    defaultValue: false,
-  );
+
   try {
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: (kReleaseMode && !forceDebugAppCheck)
-          ? const AndroidPlayIntegrityProvider()
-          : const AndroidDebugProvider(),
-    );
-    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
-    if (kDebugMode || forceDebugAppCheck) {
-      debugPrint('Firebase App Check provider: debug');
-    } else {
-      debugPrint('Firebase App Check provider: playIntegrity');
+    if (!kReleaseMode && !forceDebugAppCheck) {
+      debugPrint(
+        'Firebase App Check skipped for debug/profile build. '
+        'Use --dart-define=USE_APPCHECK_DEBUG=true only after registering '
+        'the printed debug token in Firebase App Check.',
+      );
+      return;
     }
+
+    final useDebugProvider = !kReleaseMode || forceDebugAppCheck;
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: useDebugProvider
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+
+      providerApple: useDebugProvider
+          ? const AppleDebugProvider()
+          : const AppleDeviceCheckProvider(),
+    );
+
+    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+
+    debugPrint('Firebase App Check initialized');
   } catch (error, stackTrace) {
     debugPrint('AppCheck activation failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
-    if (kReleaseMode && !forceDebugAppCheck && allowReleaseDebugFallback) {
-      await _activateAppCheckDebugFallback();
-    }
-  }
-}
-
-Future<void> _activateAppCheckDebugFallback() async {
-  try {
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: const AndroidDebugProvider(),
-    );
-    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
-    debugPrint(
-      'Firebase App Check fallback provider: debug (release fallback)',
-    );
-  } catch (error, stackTrace) {
-    debugPrint('AppCheck fallback activation failed: $error');
     debugPrintStack(stackTrace: stackTrace);
   }
 }
@@ -166,6 +146,14 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
+      // Initialise AuthController as a permanent singleton before the first
+      // route is built. This ensures _restorePendingOtpState() runs and
+      // showOtp.value is set to true before SplashController._navigateNext()
+      // is called, so the OTP screen is not interrupted when the app returns
+      // from the iOS reCAPTCHA browser.
+      initialBinding: BindingsBuilder(() {
+        AuthController.instance;
+      }),
       builder: (context, child) {
         return NetworkConnectivityGuard(
           child: child ?? const SizedBox.shrink(),

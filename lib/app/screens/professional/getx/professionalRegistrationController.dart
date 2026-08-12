@@ -38,12 +38,7 @@ class WorkingLocation {
   }
 }
 
-enum ServiceQuestionInputType {
-  text,
-  number,
-  radio,
-  dropdown,
-}
+enum ServiceQuestionInputType { text, number, radio, dropdown }
 
 class ServiceQuestionConfiguration {
   const ServiceQuestionConfiguration({
@@ -84,7 +79,8 @@ class ProfessionalRegistrationController extends GetxController {
   static const int maxPdfSizeBytes = 5 * 1024 * 1024;
 
   /// -- Form Keys
-  final GlobalKey<FormState> professionalRegistrationFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> professionalRegistrationFormKey =
+      GlobalKey<FormState>();
 
   /// -- Textfield Controllers
   final TextEditingController genderController = TextEditingController();
@@ -110,7 +106,8 @@ class ProfessionalRegistrationController extends GetxController {
     "Marathi",
   ];
   RxList<String> selectedLanguages = <String>[].obs;
-  final TextEditingController permanentAddressController = TextEditingController();
+  final TextEditingController permanentAddressController =
+      TextEditingController();
   final List<String> stateOptions = IndiaLocations.states;
   final Map<String, List<String>> cityOptionsByState =
       IndiaLocations.citiesByState;
@@ -169,6 +166,11 @@ class ProfessionalRegistrationController extends GetxController {
       selectedLatitude.value != null &&
       selectedLongitude.value != null &&
       permanentAddressController.text.trim().isNotEmpty;
+  bool get canContinueStep2 =>
+      !isResolvingAddressFromMap.value &&
+      (hasSelectedLocation ||
+          (!isMapApiConfigured &&
+              permanentAddressController.text.trim().isNotEmpty));
 
   /// -- Step 3 Working Locations
   RxBool isWorkingLocationExpanded = false.obs;
@@ -314,7 +316,7 @@ class ProfessionalRegistrationController extends GetxController {
   };
 
   late final Map<String, List<ServiceQuestionConfiguration>>
-      serviceQuestionMap = {
+  serviceQuestionMap = {
     servicePhotoVideo: <ServiceQuestionConfiguration>[
       _professionalTypeQuestion(),
       _teamSizeQuestion(),
@@ -602,10 +604,7 @@ class ProfessionalRegistrationController extends GetxController {
         return;
       }
       if (file.size <= 0 || file.size > maxPdfSizeBytes) {
-        AppSnackbar.error(
-          "Invalid File",
-          "Please upload a PDF up to 5 MB.",
-        );
+        AppSnackbar.error("Invalid File", "Please upload a PDF up to 5 MB.");
         return;
       }
       _bankPassbookFile = file;
@@ -626,10 +625,7 @@ class ProfessionalRegistrationController extends GetxController {
         return;
       }
       if (file.size <= 0 || file.size > maxPdfSizeBytes) {
-        AppSnackbar.error(
-          "Invalid File",
-          "Please upload a PDF up to 5 MB.",
-        );
+        AppSnackbar.error("Invalid File", "Please upload a PDF up to 5 MB.");
         return;
       }
       _aadharFile = file;
@@ -650,10 +646,7 @@ class ProfessionalRegistrationController extends GetxController {
         return;
       }
       if (file.size <= 0 || file.size > maxPdfSizeBytes) {
-        AppSnackbar.error(
-          "Invalid File",
-          "Please upload a PDF up to 5 MB.",
-        );
+        AppSnackbar.error("Invalid File", "Please upload a PDF up to 5 MB.");
         return;
       }
       _panFile = file;
@@ -749,12 +742,14 @@ class ProfessionalRegistrationController extends GetxController {
   List<String> get currentServiceSpecialityOptions =>
       serviceSpecialityMap[selectedServiceType.value] ??
       _defaultServiceSpecialityMap[_resolveServiceQuestionKey(
-            selectedServiceType.value,
-          )] ??
+        selectedServiceType.value,
+      )] ??
       <String>[];
 
   List<ServiceQuestionConfiguration> get activeServiceQuestions =>
-      (serviceQuestionMap[_resolveServiceQuestionKey(selectedServiceType.value)] ??
+      (serviceQuestionMap[_resolveServiceQuestionKey(
+                selectedServiceType.value,
+              )] ??
               <ServiceQuestionConfiguration>[])
           .where(
             (question) => !const {
@@ -807,34 +802,35 @@ class ProfessionalRegistrationController extends GetxController {
   void _applyServiceCatalogSnapshot(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
-    final parsed = docs
-        .map((doc) {
-          final data = doc.data();
-          final name = (data['name'] as String? ?? '').trim();
-          final active = (data['isActive'] as bool?) ?? true;
-          final sortOrderRaw = data['sortOrder'];
-          final sortOrder = sortOrderRaw is int
-              ? sortOrderRaw
-              : int.tryParse('$sortOrderRaw') ?? 999;
-          final events = _readStringList(data['activeEventTypeNames']);
-          final hasEventsField = data.containsKey('activeEventTypeNames');
-          return (
-            name: name,
-            active: active,
-            sortOrder: sortOrder,
-            events: events,
-            hasEventsField: hasEventsField,
-          );
-        })
-        .where((item) => item.active && item.name.isNotEmpty)
-        .toList(growable: false)
-      ..sort((left, right) {
-          final sortCompare = left.sortOrder.compareTo(right.sortOrder);
-          if (sortCompare != 0) {
-            return sortCompare;
-          }
-          return left.name.toLowerCase().compareTo(right.name.toLowerCase());
-        });
+    final parsed =
+        docs
+            .map((doc) {
+              final data = doc.data();
+              final name = (data['name'] as String? ?? '').trim();
+              final active = (data['isActive'] as bool?) ?? true;
+              final sortOrderRaw = data['sortOrder'];
+              final sortOrder = sortOrderRaw is int
+                  ? sortOrderRaw
+                  : int.tryParse('$sortOrderRaw') ?? 999;
+              final events = _readStringList(data['activeEventTypeNames']);
+              final hasEventsField = data.containsKey('activeEventTypeNames');
+              return (
+                name: name,
+                active: active,
+                sortOrder: sortOrder,
+                events: events,
+                hasEventsField: hasEventsField,
+              );
+            })
+            .where((item) => item.active && item.name.isNotEmpty)
+            .toList(growable: false)
+          ..sort((left, right) {
+            final sortCompare = left.sortOrder.compareTo(right.sortOrder);
+            if (sortCompare != 0) {
+              return sortCompare;
+            }
+            return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+          });
 
     if (parsed.isEmpty) {
       _applyDefaultServiceCatalog();
@@ -850,8 +846,10 @@ class ProfessionalRegistrationController extends GetxController {
       } else if (item.hasEventsField) {
         nextSpecialities[item.name] = <String>[];
       } else {
-        nextSpecialities[item.name] = _defaultServiceSpecialityMap[
-                _resolveServiceQuestionKey(item.name)] ??
+        nextSpecialities[item.name] =
+            _defaultServiceSpecialityMap[_resolveServiceQuestionKey(
+              item.name,
+            )] ??
             <String>[];
       }
     }
@@ -880,9 +878,10 @@ class ProfessionalRegistrationController extends GetxController {
   }
 
   String _resolveServiceQuestionKey(String serviceName) {
-    final normalized = serviceName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final normalized = serviceName.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]'),
+      '',
+    );
     if (normalized.contains('photo') && normalized.contains('video')) {
       return servicePhotoVideo;
     }
@@ -937,7 +936,9 @@ class ProfessionalRegistrationController extends GetxController {
       return;
     }
 
-    final fallbackHasAddress = permanentAddressController.text.trim().isNotEmpty;
+    final fallbackHasAddress = permanentAddressController.text
+        .trim()
+        .isNotEmpty;
     if (fallbackHasAddress) {
       return;
     }
@@ -956,30 +957,33 @@ class ProfessionalRegistrationController extends GetxController {
       return;
     }
 
-    _placeSearchDebounceTimer = Timer(const Duration(milliseconds: 400), () async {
-      final requestId = ++_placeSearchRequestId;
-      isSearchingPlaces.value = true;
-      try {
-        final suggestions = await _mapsService.fetchPlaceSuggestions(query);
-        if (requestId != _placeSearchRequestId) {
-          return;
+    _placeSearchDebounceTimer = Timer(
+      const Duration(milliseconds: 400),
+      () async {
+        final requestId = ++_placeSearchRequestId;
+        isSearchingPlaces.value = true;
+        try {
+          final suggestions = await _mapsService.fetchPlaceSuggestions(query);
+          if (requestId != _placeSearchRequestId) {
+            return;
+          }
+          placeSuggestions.assignAll(suggestions);
+        } catch (_) {
+          if (requestId != _placeSearchRequestId) {
+            return;
+          }
+          placeSuggestions.clear();
+          AppSnackbar.error(
+            "Search Failed",
+            "Unable to fetch location suggestions right now.",
+          );
+        } finally {
+          if (requestId == _placeSearchRequestId) {
+            isSearchingPlaces.value = false;
+          }
         }
-        placeSuggestions.assignAll(suggestions);
-      } catch (_) {
-        if (requestId != _placeSearchRequestId) {
-          return;
-        }
-        placeSuggestions.clear();
-        AppSnackbar.error(
-          "Search Failed",
-          "Unable to fetch location suggestions right now.",
-        );
-      } finally {
-        if (requestId == _placeSearchRequestId) {
-          isSearchingPlaces.value = false;
-        }
-      }
-    });
+      },
+    );
   }
 
   Future<void> selectAddressSuggestion(PlaceSuggestion suggestion) async {
@@ -1291,7 +1295,7 @@ class ProfessionalRegistrationController extends GetxController {
       );
     }
 
-    if (clearAfter = true) {
+    if (clearAfter) {
       selectedSecondaryWorkingState.value = "";
       selectedSecondaryWorkingCities.clear();
     }
@@ -1300,6 +1304,119 @@ class ProfessionalRegistrationController extends GetxController {
 
   void addMoreSecondaryWorkingLocation() {
     saveSecondaryWorkingLocation(clearAfter: true);
+  }
+
+  // Storage keys for persisting pending OTP state across iOS reCAPTCHA return.
+  static const String _profPendingOtpFlagKey = 'profPendingOtpFlag';
+  static const String _profPendingVerificationIdKey =
+      'profPendingVerificationId';
+  static const String _profPendingPhoneKey = 'profPendingPhone';
+  static const String _profPendingOtpInFlightKey = 'profPendingOtpInFlight';
+
+  /// True when a professional OTP is pending (full or in-flight).
+  static bool get hasPendingOtp {
+    final storage = GetStorage();
+    if (storage.read(_profPendingOtpFlagKey) == true &&
+        (storage.read(_profPendingVerificationIdKey) as String? ?? '')
+            .isNotEmpty &&
+        (storage.read(_profPendingPhoneKey) as String? ?? '').isNotEmpty) {
+      return true;
+    }
+    if (storage.read(_profPendingOtpInFlightKey) == true &&
+        (storage.read(_profPendingPhoneKey) as String? ?? '').isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  void _persistPendingOtpState({
+    required String verificationId,
+    required String phoneNumber,
+  }) {
+    _localStorage.write(_profPendingOtpFlagKey, true);
+    _localStorage.write(_profPendingVerificationIdKey, verificationId);
+    _localStorage.write(_profPendingPhoneKey, phoneNumber);
+  }
+
+  void _clearPendingOtpStorage() {
+    _localStorage.remove(_profPendingOtpFlagKey);
+    _localStorage.remove(_profPendingVerificationIdKey);
+    _localStorage.remove(_profPendingPhoneKey);
+    _localStorage.remove(_profPendingOtpInFlightKey);
+  }
+
+  void _restorePendingOtpState() {
+    final isPending = _localStorage.read(_profPendingOtpFlagKey) == true;
+    final isInFlight = _localStorage.read(_profPendingOtpInFlightKey) == true;
+
+    if (!isPending && !isInFlight) return;
+
+    final storedPhone = (_localStorage.read(_profPendingPhoneKey) as String?)
+        ?.trim();
+    if (storedPhone == null || storedPhone.isEmpty) {
+      _clearPendingOtpStorage();
+      return;
+    }
+
+    final localPart = storedPhone.startsWith('+91') && storedPhone.length >= 13
+        ? storedPhone.substring(3)
+        : storedPhone;
+    phoneController.text = localPart;
+
+    final storedVerificationId =
+        (_localStorage.read(_profPendingVerificationIdKey) as String?)?.trim();
+
+    if (storedVerificationId != null && storedVerificationId.isNotEmpty) {
+      // Full state: verificationId already received — show OTP input.
+      _verificationId = storedVerificationId;
+      isOtpSent.value = true;
+      isPhoneVerified.value = false;
+      startTimer();
+      debugPrint(
+        '[ProfRegController] Restored pending OTP — phone=$storedPhone',
+      );
+    } else {
+      // In-flight: verifyPhoneNumber was called but codeSent has not fired yet
+      // on the old controller instance. Show OTP field as waiting and poll
+      // storage until the old codeSent closure writes the verificationId.
+      // Do NOT call requestOtp() — that would trigger a second reCAPTCHA.
+      isOtpSent.value = true;
+      isPhoneVerified.value = false;
+      canResendOtp.value = false;
+      secondsRemaining.value = 0;
+      debugPrint(
+        '[ProfRegController] In-flight OTP — polling for verificationId, phone=$storedPhone',
+      );
+      _pollForVerificationId();
+    }
+  }
+
+  /// Polls GetStorage every 500 ms (up to 30 s) for the verificationId written
+  /// by the old codeSent closure. No second reCAPTCHA is triggered.
+  void _pollForVerificationId() {
+    const maxAttempts = 60; // 30 seconds
+    var attempts = 0;
+    Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (isClosed) {
+        timer.cancel();
+        return;
+      }
+      final vid = (_localStorage.read(_profPendingVerificationIdKey) as String?)
+          ?.trim();
+      if (vid != null && vid.isNotEmpty) {
+        timer.cancel();
+        _verificationId = vid;
+        canResendOtp.value = true;
+        debugPrint('[ProfRegController] Poll found verificationId — OTP ready');
+        return;
+      }
+      attempts++;
+      if (attempts >= maxAttempts) {
+        timer.cancel();
+        canResendOtp.value = true;
+        debugPrint('[ProfRegController] Poll timed out — enabling resend');
+      }
+    });
   }
 
   /// -- Reactive States
@@ -1325,7 +1442,8 @@ class ProfessionalRegistrationController extends GetxController {
   bool _phoneAuthSettingsConfigured = false;
   bool get isOtpLocked => otpLockSecondsRemaining.value > 0;
   String get resendCountdown => _formatCountdown(secondsRemaining.value);
-  String get otpLockCountdown => _formatCountdown(otpLockSecondsRemaining.value);
+  String get otpLockCountdown =>
+      _formatCountdown(otpLockSecondsRemaining.value);
 
   Duration get _firebasePhoneAutoRetrievalTimeout {
     if (kIsWeb) {
@@ -1340,6 +1458,13 @@ class ProfessionalRegistrationController extends GetxController {
 
   /// -- Request OTP via API
   void requestOtp() async {
+    if (isLoading.value || hasPendingOtp) {
+      AppSnackbar.info(
+        "OTP Pending",
+        "Please wait for the current OTP request.",
+      );
+      return;
+    }
     if (phoneController.text.length != 10) {
       AppSnackbar.error("Error", "Enter valid 10-digit phone number");
       return;
@@ -1379,25 +1504,35 @@ class ProfessionalRegistrationController extends GetxController {
         return;
       }
       final timeout = _firebasePhoneAutoRetrievalTimeout;
+      // Mark in-flight before verifyPhoneNumber so hasPendingOtp is true
+      // while iOS reCAPTCHA browser is open.
+      _localStorage.write(_profPendingOtpInFlightKey, true);
+      _localStorage.write(_profPendingPhoneKey, phoneNumber);
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: timeout,
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
+            _clearPendingOtpStorage();
             await _handlePhoneCredential(credential, phoneNumber);
           } catch (e) {
             debugPrint('Professional auto OTP verify callback failed: $e');
           }
         },
         verificationFailed: (FirebaseAuthException e) {
-          AppSnackbar.error(
-            "OTP Failed",
-            e.message ?? "Could not send OTP. Please try again.",
+          debugPrint(
+            'Professional verificationFailed: code=${e.code} message=${e.message}',
           );
+          _clearPendingOtpStorage();
+          AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
         },
         codeSent: (String verificationId, int? resendToken) {
           _verificationId = verificationId;
           _resendToken = resendToken;
+          _persistPendingOtpState(
+            verificationId: verificationId,
+            phoneNumber: phoneNumber,
+          );
           otpController.clear();
           isOtpSent.value = true;
           isPhoneVerified.value = false;
@@ -1424,16 +1559,14 @@ class ProfessionalRegistrationController extends GetxController {
         },
       );
     } on FirebaseAuthException catch (e) {
-      AppSnackbar.error(
-        "OTP Failed",
-        e.message ?? "Could not send OTP. Please try again.",
+      debugPrint(
+        'Professional verifyPhoneNumber exception: code=${e.code} message=${e.message}',
       );
+      _clearPendingOtpStorage();
+      AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
     } catch (e) {
       debugPrint('Professional verifyPhoneNumber failed: $e');
-      AppSnackbar.error(
-        "OTP Failed",
-        "Could not send OTP. Please try again.",
-      );
+      AppSnackbar.error("OTP Failed", "Could not send OTP. Please try again.");
     } finally {
       isLoading.value = false;
     }
@@ -1442,32 +1575,48 @@ class ProfessionalRegistrationController extends GetxController {
   Future<bool> _isPhoneAlreadyRegisteredAsProfessional(
     String normalizedPhone,
   ) async {
-    final usersSnapshot = await _db
-        .collection('users')
-        .where('phoneNumber', isEqualTo: normalizedPhone)
-        .limit(20)
-        .get();
-    for (final doc in usersSnapshot.docs) {
-      final data = doc.data();
-      final role = '${data['role'] ?? ''}'.trim().toLowerCase();
-      final rbacRole = '${data['rbacRole'] ?? ''}'.trim().toLowerCase();
-      final isProfessionalRecord =
-          role == 'professional' ||
-          role == 'professional_pending' ||
-          rbacRole == 'professional' ||
-          data['isProfessionalOnboarded'] == true ||
-          data['hasProfessionalProfile'] == true;
-      if (isProfessionalRecord) {
-        return true;
+    final currentUid = _auth.currentUser?.uid.trim() ?? '';
+    try {
+      final usersSnapshot = await _db
+          .collection('users')
+          .where('phoneNumber', isEqualTo: normalizedPhone)
+          .limit(20)
+          .get();
+      for (final doc in usersSnapshot.docs) {
+        if (currentUid.isNotEmpty && doc.id == currentUid) {
+          continue;
+        }
+        final data = doc.data();
+        final role = '${data['role'] ?? ''}'.trim().toLowerCase();
+        final rbacRole = '${data['rbacRole'] ?? ''}'.trim().toLowerCase();
+        final isProfessionalRecord =
+            role == 'professional' ||
+            role == 'professional_pending' ||
+            rbacRole == 'professional' ||
+            data['isProfessionalOnboarded'] == true ||
+            data['hasProfessionalProfile'] == true;
+        if (isProfessionalRecord) {
+          return true;
+        }
       }
-    }
 
-    final profileSnapshot = await _db
-        .collection('professional_profiles')
-        .where('phoneNumber', isEqualTo: normalizedPhone)
-        .limit(1)
-        .get();
-    return profileSnapshot.docs.isNotEmpty;
+      final profileSnapshot = await _db
+          .collection('professional_profiles')
+          .where('phoneNumber', isEqualTo: normalizedPhone)
+          .limit(1)
+          .get();
+      return profileSnapshot.docs.any(
+        (doc) => currentUid.isEmpty || doc.id != currentUid,
+      );
+    } on FirebaseException catch (error) {
+      debugPrint(
+        'Professional duplicate phone precheck skipped: ${error.code}',
+      );
+      return false;
+    } catch (error) {
+      debugPrint('Professional duplicate phone precheck skipped: $error');
+      return false;
+    }
   }
 
   /// -- Verify OTP via API
@@ -1486,8 +1635,9 @@ class ProfessionalRegistrationController extends GetxController {
       }
       isLoading.value = true;
       try {
-        final userCredential =
-            await _confirmationResult!.confirm(otpController.text.trim());
+        final userCredential = await _confirmationResult!.confirm(
+          otpController.text.trim(),
+        );
         RecaptchaService.markVerified();
         await _handleSignedInUser(
           userCredential.user,
@@ -1577,12 +1727,16 @@ class ProfessionalRegistrationController extends GetxController {
         return;
       }
       final timeout = _firebasePhoneAutoRetrievalTimeout;
+      // Mark in-flight before verifyPhoneNumber.
+      _localStorage.write(_profPendingOtpInFlightKey, true);
+      _localStorage.write(_profPendingPhoneKey, phoneNumber);
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: timeout,
         forceResendingToken: _resendToken,
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
+            _clearPendingOtpStorage();
             await _handlePhoneCredential(credential, phoneNumber);
           } catch (e) {
             debugPrint(
@@ -1591,14 +1745,19 @@ class ProfessionalRegistrationController extends GetxController {
           }
         },
         verificationFailed: (FirebaseAuthException e) {
-          AppSnackbar.error(
-            "OTP Failed",
-            e.message ?? "Could not resend OTP.",
+          debugPrint(
+            'Professional resend verificationFailed: code=${e.code} message=${e.message}',
           );
+          _clearPendingOtpStorage();
+          AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
         },
         codeSent: (String verificationId, int? resendToken) {
           _verificationId = verificationId;
           _resendToken = resendToken;
+          _persistPendingOtpState(
+            verificationId: verificationId,
+            phoneNumber: phoneNumber,
+          );
           otpController.clear();
           startTimer();
           _startOtpAutoFillListener();
@@ -1623,19 +1782,24 @@ class ProfessionalRegistrationController extends GetxController {
         },
       );
     } on FirebaseAuthException catch (e) {
-      AppSnackbar.error(
-        "OTP Failed",
-        e.message ?? "Could not resend OTP.",
+      debugPrint(
+        'Professional resend verifyPhoneNumber exception: code=${e.code} message=${e.message}',
       );
+      _clearPendingOtpStorage();
+      AppSnackbar.error("OTP Failed", _phoneAuthFailureMessage(e));
     } catch (e) {
       debugPrint('Professional resend verifyPhoneNumber failed: $e');
-      AppSnackbar.error(
-        "OTP Failed",
-        "Could not resend OTP.",
-      );
+      AppSnackbar.error("OTP Failed", "Could not resend OTP.");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String _phoneAuthFailureMessage(FirebaseAuthException error) {
+    if (error.code == 'missing-client-identifier') {
+      return "Phone verification could not start. Please restart the app and try again.";
+    }
+    return error.message ?? "Could not send OTP. Please try again.";
   }
 
   Future<void> enablePhoneNumberEdit() async {
@@ -1648,6 +1812,7 @@ class ProfessionalRegistrationController extends GetxController {
     _verificationId = null;
     _resendToken = null;
     _confirmationResult = null;
+    _clearPendingOtpStorage();
     _stopOtpAutoFillListener();
     _timer?.cancel();
     secondsRemaining.value = 0;
@@ -1721,8 +1886,19 @@ class ProfessionalRegistrationController extends GetxController {
     failedOtpAttempts.value = 0;
     otpLockSecondsRemaining.value = 0;
     _otpLockTimer?.cancel();
+    _clearPendingOtpStorage();
     _localStorage.write(AuthController.hideGuestCtaStorageKey, true);
     _localStorage.write(AuthController.hideProfessionalCtaStorageKey, true);
+    await RbacService.persistLocalDecision(
+      _localStorage,
+      const RbacDecision(
+        role: RbacDecision.roleProfessional,
+        approvalStatus: 'pending',
+        isProfessionalOnboarded: true,
+        hasProfessionalProfile: false,
+      ),
+      uid: user.uid,
+    );
     isPhoneVerified.value = true;
     isOtpSent.value = false;
     _confirmationResult = null;
@@ -1763,7 +1939,9 @@ class ProfessionalRegistrationController extends GetxController {
   }
 
   bool _isOtpAutoFillSessionActive(int epoch) {
-    return epoch == _otpListenEpoch && isOtpSent.value && !isPhoneVerified.value;
+    return epoch == _otpListenEpoch &&
+        isOtpSent.value &&
+        !isPhoneVerified.value;
   }
 
   Future<void> _listenWithRetrieverApi(int epoch) async {
@@ -1872,7 +2050,12 @@ class ProfessionalRegistrationController extends GetxController {
     final dob = selectedDob.value!;
     final today = DateTime.now();
     final age =
-        today.year - dob.year - ((today.month < dob.month || (today.month == dob.month && today.day < dob.day)) ? 1 : 0);
+        today.year -
+        dob.year -
+        ((today.month < dob.month ||
+                (today.month == dob.month && today.day < dob.day))
+            ? 1
+            : 0);
     if (age < 18) {
       AppSnackbar.error("Invalid Age", "You must be at least 18 years old.");
       return false;
@@ -1882,11 +2065,18 @@ class ProfessionalRegistrationController extends GetxController {
       return false;
     }
     if (selectedLatitude.value == null || selectedLongitude.value == null) {
-      AppSnackbar.error(
-        "Location Required",
-        "Please select your location on map.",
-      );
-      return false;
+      if (!isMapApiConfigured) {
+        selectedLatitude.value = _defaultIndiaLatitude;
+        selectedLongitude.value = _defaultIndiaLongitude;
+        mapCenterLatitude.value = _defaultIndiaLatitude;
+        mapCenterLongitude.value = _defaultIndiaLongitude;
+      } else {
+        AppSnackbar.error(
+          "Location Required",
+          "Please select your location on map.",
+        );
+        return false;
+      }
     }
 
     if (selectedLanguages.isEmpty) {
@@ -1962,7 +2152,10 @@ class ProfessionalRegistrationController extends GetxController {
       return false;
     }
     if (!_isValidUrl(googleDriveController.text.trim())) {
-      AppSnackbar.error("Invalid Value", "Please enter a valid Google Drive URL.");
+      AppSnackbar.error(
+        "Invalid Value",
+        "Please enter a valid Google Drive URL.",
+      );
       return false;
     }
     if (instagramController.text.trim().isEmpty) {
@@ -2102,7 +2295,9 @@ class ProfessionalRegistrationController extends GetxController {
       );
       return false;
     }
-    if (!RegExp(r'^[0-9]{9,18}$').hasMatch(accountNumberController.text.trim())) {
+    if (!RegExp(
+      r'^[0-9]{9,18}$',
+    ).hasMatch(accountNumberController.text.trim())) {
       AppSnackbar.error(
         "Invalid Value",
         "Account number must be between 9 and 18 digits.",
@@ -2115,15 +2310,19 @@ class ProfessionalRegistrationController extends GetxController {
     }
     if (_bankPassbookFile!.size <= 0 ||
         _bankPassbookFile!.size > maxPdfSizeBytes) {
-      AppSnackbar.error("Invalid File", "Bank passbook PDF must be up to 5 MB.");
+      AppSnackbar.error(
+        "Invalid File",
+        "Bank passbook PDF must be up to 5 MB.",
+      );
       return false;
     }
     if (upiController.text.trim().isEmpty) {
       AppSnackbar.error("Required", "Please enter UPI ID.");
       return false;
     }
-    if (!RegExp(r'^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$')
-        .hasMatch(upiController.text.trim())) {
+    if (!RegExp(
+      r'^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$',
+    ).hasMatch(upiController.text.trim())) {
       AppSnackbar.error("Invalid Value", "Please enter a valid UPI ID.");
       return false;
     }
@@ -2139,8 +2338,9 @@ class ProfessionalRegistrationController extends GetxController {
       AppSnackbar.error("Required", "Please enter IFSC code.");
       return false;
     }
-    if (!RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$')
-        .hasMatch(ifscController.text.trim().toUpperCase())) {
+    if (!RegExp(
+      r'^[A-Z]{4}0[A-Z0-9]{6}$',
+    ).hasMatch(ifscController.text.trim().toUpperCase())) {
       AppSnackbar.error("Invalid Value", "Please enter a valid IFSC code.");
       return false;
     }
@@ -2208,7 +2408,8 @@ class ProfessionalRegistrationController extends GetxController {
       );
 
       final now = FieldValue.serverTimestamp();
-      final experienceYears = int.tryParse(
+      final experienceYears =
+          int.tryParse(
             selectedExperience.value.replaceAll(RegExp(r'[^0-9]'), ''),
           ) ??
           0;
@@ -2237,8 +2438,9 @@ class ProfessionalRegistrationController extends GetxController {
           'teamSize': getServiceQuestionAnswer(_questionTeamSize),
           'workingDays': selectedWorkingDays.toList(),
           'workingLocations': workingLocations.map((e) => e.toMap()).toList(),
-          'secondaryLocations':
-              secondaryWorkingLocations.map((e) => e.toMap()).toList(),
+          'secondaryLocations': secondaryWorkingLocations
+              .map((e) => e.toMap())
+              .toList(),
           'shortBio': shortBioController.text.trim(),
           'googleDrive': googleDriveController.text.trim(),
           'instagram': instagramController.text.trim(),
@@ -2297,13 +2499,16 @@ class ProfessionalRegistrationController extends GetxController {
         'professionalStatus': 'under_review',
         'updatedAt': now,
       }, SetOptions(merge: true));
-      _localStorage.write('userRole', 'professional_pending');
-      _localStorage.write('rbacRole', 'professional');
-      _localStorage.write('approvalStatus', 'pending');
-      _localStorage.write('isProfessionalOnboarded', true);
-      _localStorage.write('hasProfessionalProfile', true);
-      _localStorage.write('hideGuestCTA', true);
-      _localStorage.write('hideProfessionalCTA', true);
+      await RbacService.persistLocalDecision(
+        _localStorage,
+        const RbacDecision(
+          role: RbacDecision.roleProfessional,
+          approvalStatus: 'pending',
+          isProfessionalOnboarded: true,
+          hasProfessionalProfile: true,
+        ),
+        uid: uid,
+      );
       _setUploadProgress(1.0, status: "Upload complete.");
 
       AppSnackbar.success(
@@ -2333,9 +2538,9 @@ class ProfessionalRegistrationController extends GetxController {
     required String statusLabel,
   }) async {
     final safeName = file.name.replaceAll(RegExp(r'\s+'), '_');
-    final ref = _storage
-        .ref()
-        .child('professional_documents/$uid/$label-$safeName');
+    final ref = _storage.ref().child(
+      'professional_documents/$uid/$label-$safeName',
+    );
     UploadTask task;
     if (file.bytes != null) {
       task = ref.putData(
@@ -2381,27 +2586,16 @@ class ProfessionalRegistrationController extends GetxController {
     if (_phoneAuthSettingsConfigured || kIsWeb) {
       return;
     }
-    if (defaultTargetPlatform != TargetPlatform.android) {
-      _phoneAuthSettingsConfigured = true;
-      return;
-    }
-    const forceRecaptchaInDebug = bool.fromEnvironment(
-      'FORCE_RECAPTCHA_OTP_DEBUG',
-      defaultValue: true,
-    );
-    const forceRecaptchaInRelease = bool.fromEnvironment(
-      'FORCE_RECAPTCHA_OTP_RELEASE',
-      defaultValue: false,
-    );
-    final shouldForceRecaptcha = kReleaseMode
-        ? forceRecaptchaInRelease
-        : forceRecaptchaInDebug;
     try {
-      await _auth.setSettings(forceRecaptchaFlow: shouldForceRecaptcha);
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await _auth.setSettings(forceRecaptchaFlow: false);
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        if (!kReleaseMode) {
+          await _auth.setSettings(appVerificationDisabledForTesting: true);
+        }
+      }
       _phoneAuthSettingsConfigured = true;
-      debugPrint(
-        'Professional phone settings configured: forceRecaptchaFlow=$shouldForceRecaptcha',
-      );
+      debugPrint('Professional phone settings configured');
     } catch (e) {
       debugPrint('Failed to configure professional phone settings: $e');
     }
@@ -2438,6 +2632,9 @@ class ProfessionalRegistrationController extends GetxController {
       if (draft.isNotEmpty) {
         _hydrateFromDraft(draft);
       }
+      // Restore pending OTP state after draft hydration so phone field is
+      // already populated before we overwrite isOtpSent / _verificationId.
+      _restorePendingOtpState();
     } finally {
       isDraftLoaded.value = true;
     }
@@ -2516,12 +2713,16 @@ class ProfessionalRegistrationController extends GetxController {
     await _mergeDraftSection(_draftStep5Key, <String, dynamic>{
       'serviceType': selectedServiceType.value,
       'serviceSpecialities': selectedServiceSpecialities.toList(),
-      'serviceQuestionAnswers': Map<String, String>.from(serviceQuestionAnswers),
+      'serviceQuestionAnswers': Map<String, String>.from(
+        serviceQuestionAnswers,
+      ),
       'urgentAvailable': urgentAvailable.value,
       'willingToTravel': willingToTravel.value,
       'cancellationAccepted': cancellationAccepted.value,
       'commissionAccepted': commissionAccepted.value,
-      'secondaryLocations': secondaryWorkingLocations.map((e) => e.toMap()).toList(),
+      'secondaryLocations': secondaryWorkingLocations
+          .map((e) => e.toMap())
+          .toList(),
       'bankName': bankNameController.text.trim(),
       'branchName': branchNameController.text.trim(),
       'bankPassbookFileName': bankPassbookFileName.value,
@@ -2552,9 +2753,7 @@ class ProfessionalRegistrationController extends GetxController {
       isPhoneVerified.value = phoneVerified;
       isOtpSent.value = !phoneVerified && otpRequested;
       if (isOtpSent.value) {
-        _timer?.cancel();
-        canResendOtp.value = true;
-        secondsRemaining.value = 0;
+        startTimer();
         _startOtpAutoFillListener();
       }
     }
@@ -2587,11 +2786,13 @@ class ProfessionalRegistrationController extends GetxController {
     final step3 = _readStep3Draft(draft);
     if (step3.isNotEmpty) {
       final experience = _readString(step3, 'experience');
-      selectedExperience.value =
-          experienceOptions.contains(experience) ? experience : '';
+      selectedExperience.value = experienceOptions.contains(experience)
+          ? experience
+          : '';
       selectedWorkingDays.assignAll(
-        _readStringList(step3['workingDays'])
-            .where((day) => workingDaysOptions.contains(day)),
+        _readStringList(
+          step3['workingDays'],
+        ).where((day) => workingDaysOptions.contains(day)),
       );
       workingLocations.assignAll(_mapToLocations(step3['workingLocations']));
 

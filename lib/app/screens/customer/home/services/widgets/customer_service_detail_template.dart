@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
 import 'package:clicknow_version2/app/screens/customer/getx/customer_booking_controller.dart';
-import 'package:clicknow_version2/app/screens/customer/home/customer_bookings_screen.dart';
+import 'package:clicknow_version2/app/screens/customer/home/customer_checkout_screen.dart';
 import 'package:clicknow_version2/app/screens/professional/professionalRegistration/professional_location_picker_screen.dart';
 import 'package:clicknow_version2/app/screens/professional/professionalRegistration/widgets/address_preview_card.dart';
 import 'package:clicknow_version2/app/screens/professional/professionalRegistration/widgets/location_search_field.dart';
@@ -1173,7 +1173,7 @@ class _CustomerServiceDetailScreenState
             border: Border(
               top: BorderSide(
                 color: isDark
-                    ? Colors.white.withOpacity(0.08)
+                    ? Colors.white.withValues(alpha: 0.08)
                     : const Color(0xFFE5E5E5),
               ),
             ),

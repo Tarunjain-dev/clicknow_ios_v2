@@ -1,4 +1,3 @@
-
 import 'package:clicknow_version2/app/screens/professional/getx/professionalBottomNavBarController.dart';
 import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
 import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
@@ -17,36 +16,33 @@ class ProfessionalBottomNavBar extends StatelessWidget {
     /// -- Dark mode instance
     final isDark = HelperFunctions.isDarkMode(context);
 
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        backgroundColor: isDark ? Colors.black : Colors.white,
+    return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
 
-        /// BODY
-        body: Obx(
-          () => AnimatedSwitcher(
-            duration: const Duration(milliseconds: 2),
-            child: professionalBottomNavController.screens[professionalBottomNavController.index.value],
-          ),
+      /// BODY
+      body: Obx(
+        () => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 2),
+          child: professionalBottomNavController.screens[professionalBottomNavController.index.value],
         ),
+      ),
 
-        /// BOTTOM NAVIGATION
-        bottomNavigationBar: Obx(
-          () => Container(
-            height: ResponsiveUtility.height(72),
-            padding: ResponsiveUtility.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.black : Color(0xffFCFCFC).withValues(alpha: 1),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                buildNavItem(isDark: isDark, index: 0, icon: Icons.home_outlined, activeIcon: Icons.home, label: "Dashboard",),
-                buildNavItem(isDark: isDark, index: 1, icon: Icons.currency_rupee_rounded, activeIcon: Icons.currency_rupee_rounded, label: "Earnings",),
-                buildNavItem(isDark: isDark, index: 2, icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory, label: "Bookings",),
-                buildNavItem(isDark: isDark, index: 3, icon: Icons.person_outline, activeIcon: Icons.person, label: "Profile",),
-              ],
-            ),
+      /// BOTTOM NAVIGATION
+      bottomNavigationBar: Obx(
+        () => Container(
+          height: ResponsiveUtility.height(72),
+          padding: ResponsiveUtility.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.black : Color(0xffFCFCFC).withValues(alpha: 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              buildNavItem(isDark: isDark, index: 0, icon: Icons.home_outlined, activeIcon: Icons.home, label: "Dashboard",),
+              buildNavItem(isDark: isDark, index: 1, icon: Icons.currency_rupee_rounded, activeIcon: Icons.currency_rupee_rounded, label: "Earnings",),
+              buildNavItem(isDark: isDark, index: 2, icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory, label: "Bookings",),
+              buildNavItem(isDark: isDark, index: 3, icon: Icons.person_outline, activeIcon: Icons.person, label: "Profile",),
+            ],
           ),
         ),
       ),

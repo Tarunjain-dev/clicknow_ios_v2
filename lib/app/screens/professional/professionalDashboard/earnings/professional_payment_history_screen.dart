@@ -140,29 +140,19 @@ class ProfessionalPaymentHistoryScreen extends StatelessWidget {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Color(
-                                                0xFF16C658,
-                                              ).withValues(alpha: 0.15)
-                                            : Color(
-                                                0xFFE4FFD2,
-                                              ).withValues(alpha: 1.0),
+                                        color: item.status == 'RELEASED' ?
+                                        isDark ?  Color(0xFF16C658).withValues(alpha: 0.15) : Color(0xFF16C658).withValues(alpha: 0.15): 
+                                        isDark ? Color(0xffFFF7E6).withValues(alpha: 1.0) : Color(0xffFFF7E6).withValues(alpha: 1.0),
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: isDark
-                                              ? Color(0xFF16C658)
-                                              : Color(0xFF00A63E),
+                                          color: item.status == 'RELEASED' ? Color(0xFF00A63E) : Color(0xffD28A00),
                                         ),
                                       ),
                                       child: Text(
                                         item.status,
                                         style: TextStyle(
-                                          color: isDark
-                                              ? Color(0xFF16C658)
-                                              : Color(0xFF00A63E),
-                                          fontSize: ResponsiveUtility.fontSize(
-                                            12,
-                                          ),
+                                          color: item.status == 'RELEASED' ? Color(0xFF00A63E) : Color(0xffD28A00),
+                                          fontSize: ResponsiveUtility.fontSize(12),
                                         ),
                                       ),
                                     ),

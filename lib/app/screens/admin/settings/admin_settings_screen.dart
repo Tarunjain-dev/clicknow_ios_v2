@@ -20,30 +20,28 @@ class AdminSettingsScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         drawer: AdminDrawer(scale: scale, activeRoute: AppRoutes.adminSettingsRoute),
-        body: SafeArea(
-          child: Column(
-            children: <Widget>[
-              _buildHeader(scale),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    scale.getScaledWidth(14),
-                    scale.getScaledHeight(14),
-                    scale.getScaledWidth(14),
-                    scale.getScaledHeight(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _buildSectionTitle(scale),
-                      SizedBox(height: scale.getScaledHeight(12)),
-                      _buildLogoutCard(scale, controller),
-                    ],
-                  ),
+        body: Column(
+          children: <Widget>[
+            _buildHeader(scale),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  scale.getScaledWidth(14),
+                  scale.getScaledHeight(14),
+                  scale.getScaledWidth(14),
+                  scale.getScaledHeight(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _buildSectionTitle(scale),
+                    SizedBox(height: scale.getScaledHeight(12)),
+                    _buildLogoutCard(scale, controller),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -53,7 +51,7 @@ class AdminSettingsScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),

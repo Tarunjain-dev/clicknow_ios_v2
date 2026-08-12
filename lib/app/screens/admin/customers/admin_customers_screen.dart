@@ -43,64 +43,62 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
           scale: scale,
           activeRoute: AppRoutes.adminCustomersRoute,
         ),
-        body: SafeArea(
-          child: Obx(
-            () => RefreshIndicator(
-              onRefresh: () => controller.refreshCustomers(showMessage: true),
-              child: Column(
-                children: [
-                  /// -- app bar
-                  _header(scale),
-
-                  /// -- body
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            scale.getScaledWidth(14),
-                            scale.getScaledHeight(12),
-                            scale.getScaledWidth(14),
-                            scale.getScaledHeight(14),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _summaryCards(scale),
-                              SizedBox(height: scale.getScaledHeight(14)),
-                              Text(
-                                'Registered Customers',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: scale.getScaledFont(15),
-                                ),
-                              ),
-                              SizedBox(height: scale.getScaledHeight(10)),
-                              if (controller.isLoading.value && controller.filteredCustomers.isEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: scale.getScaledHeight(42),
-                                  ),
-                                  child: const Center(child: CircularProgressIndicator()),
-                                )
-                              else if (controller.filteredCustomers.isEmpty)
-                                _emptyState(scale)
-                              else
-                                ...controller.filteredCustomers.map(
-                                  (customer) => _customerCard(scale, customer),
-                                ),
-                            ],
-                          ),
+        body: Obx(
+          () => RefreshIndicator(
+            onRefresh: () => controller.refreshCustomers(showMessage: true),
+            child: Column(
+              children: [
+                /// -- app bar
+                _header(scale),
+        
+                /// -- body
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+        
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          scale.getScaledWidth(14),
+                          scale.getScaledHeight(12),
+                          scale.getScaledWidth(14),
+                          scale.getScaledHeight(14),
                         ),
-                      ],
-                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _summaryCards(scale),
+                            SizedBox(height: scale.getScaledHeight(14)),
+                            Text(
+                              'Registered Customers',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w700,
+                                fontSize: scale.getScaledFont(15),
+                              ),
+                            ),
+                            SizedBox(height: scale.getScaledHeight(10)),
+                            if (controller.isLoading.value && controller.filteredCustomers.isEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  top: scale.getScaledHeight(42),
+                                ),
+                                child: const Center(child: CircularProgressIndicator()),
+                              )
+                            else if (controller.filteredCustomers.isEmpty)
+                              _emptyState(scale)
+                            else
+                              ...controller.filteredCustomers.map(
+                                (customer) => _customerCard(scale, customer),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -112,7 +110,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),

@@ -3,6 +3,7 @@ import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/admin/bookings/getx/admin_bookings_controller.dart';
 import 'package:clicknow_version2/app/screens/admin/bookings/models/admin_booking_request.dart';
 import 'package:clicknow_version2/app/screens/admin/widgets/admin_drawer.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,9 +22,18 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
   @override
   void initState() {
     super.initState();
-    controller = Get.isRegistered<AdminBookingsController>() ? Get.find<AdminBookingsController>() : Get.put(AdminBookingsController());
+    controller = Get.isRegistered<AdminBookingsController>()
+        ? Get.find<AdminBookingsController>()
+        : Get.put(AdminBookingsController());
     searchController = TextEditingController(
-      text: (Get.arguments as Map?)?['targetUserId']?.toString().trim().isNotEmpty == true ? (Get.arguments as Map)['targetUserId'].toString().trim() : controller.searchQuery.value,
+      text:
+          (Get.arguments as Map?)?['targetUserId']
+                  ?.toString()
+                  .trim()
+                  .isNotEmpty ==
+              true
+          ? (Get.arguments as Map)['targetUserId'].toString().trim()
+          : controller.searchQuery.value,
     );
     controller.updateSearch(searchController.text);
   }
@@ -46,60 +56,57 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           scale: scale,
           activeRoute: AppRoutes.adminBookingsRoute,
         ),
-        body: SafeArea(
-          child: Obx(
-            () => RefreshIndicator(
-              onRefresh: () => controller.refreshBookings(showMessage: true),
-              child: Column(
-                children: [
-                  /// -- app bar
-                  _header(scale),
+        body: Obx(
+          () => RefreshIndicator(
+            onRefresh: () => controller.refreshBookings(showMessage: true),
+            child: Column(
+              children: [
+                /// -- app bar
+                _header(scale),
 
-                  /// -- body
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            scale.getScaledWidth(14),
-                            scale.getScaledHeight(12),
-                            scale.getScaledWidth(14),
-                            scale.getScaledHeight(16),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _summaryRow(scale),
-                              SizedBox(height: scale.getScaledHeight(12)),
-                              _statusTabs(scale),
-                              SizedBox(height: scale.getScaledHeight(12)),
-                              if (controller.isLoading.value &&
-                                  controller.filteredBookings.isEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: scale.getScaledHeight(42),
-                                  ),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              else if (controller.filteredBookings.isEmpty)
-                                _emptyState(scale)
-                              else
-                                ...controller.filteredBookings.map(
-                                  (booking) => _bookingCard(scale, booking),
-                                ),
-                            ],
-                          ),
+                /// -- body
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          scale.getScaledWidth(14),
+                          scale.getScaledHeight(12),
+                          scale.getScaledWidth(14),
+                          scale.getScaledHeight(16),
                         ),
-                      ],
-                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _summaryRow(scale),
+                            SizedBox(height: scale.getScaledHeight(12)),
+                            _statusTabs(scale),
+                            SizedBox(height: scale.getScaledHeight(12)),
+                            if (controller.isLoading.value &&
+                                controller.filteredBookings.isEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  top: scale.getScaledHeight(42),
+                                ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else if (controller.filteredBookings.isEmpty)
+                              _emptyState(scale)
+                            else
+                              ...controller.filteredBookings.map(
+                                (booking) => _bookingCard(scale, booking),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -111,12 +118,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),
       decoration: const BoxDecoration(
-        color: Color(0xff6F18A8),
+        color: Color(0xFF700095),
         border: Border(bottom: BorderSide(color: Color(0xffD9D9D9), width: 1)),
       ),
       child: Column(
@@ -143,14 +150,14 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: scale.getScaledFont(18),
+                        fontSize: ResponsiveUtility.fontSize(18),
                       ),
                     ),
                     Text(
                       'Manage customer booking requests',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.58),
-                        fontSize: scale.getScaledFont(11),
+                        fontSize: scale.getScaledFont(12),
                       ),
                     ),
                   ],
@@ -158,7 +165,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               ),
             ],
           ),
-          SizedBox(height: scale.getScaledHeight(10)),
+          SizedBox(height: scale.getScaledHeight(8)),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: scale.getScaledWidth(6)),
             child: TextField(
@@ -167,12 +174,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search bookings by ID, service, event or customer',
-                hintStyle: const TextStyle(color: Color(0xffD9D9D9)),
+                hintStyle: const TextStyle(color: Color.fromARGB(158, 0, 0, 0)),
                 filled: true,
                 fillColor: const Color(0xffFCFBFF),
                 prefixIcon: const Icon(
                   Icons.search_rounded,
-                  color: Color(0xffD9D9D9),
+                  color: Color.fromARGB(158, 0, 0, 0),
                 ),
                 suffixIcon: IconButton(
                   onPressed: () {
@@ -181,7 +188,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                   },
                   icon: const Icon(
                     Icons.close_rounded,
-                    color: Color(0xffD9D9D9),
+                    color: Color.fromARGB(158, 0, 0, 0),
                   ),
                 ),
                 border: OutlineInputBorder(
@@ -300,11 +307,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     ];
 
     return SizedBox(
-      height: scale.getScaledHeight(36),
+      height: ResponsiveUtility.height(36),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: tabs.length,
-        separatorBuilder: (context, index) => SizedBox(width: scale.getScaledWidth(8)),
+        separatorBuilder: (context, index) =>
+            SizedBox(width: ResponsiveUtility.width(8)),
         itemBuilder: (context, index) {
           final (title, value) = tabs[index];
           final isSelected = controller.selectedStatus.value == value;
@@ -318,19 +326,23 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale.getScaledWidth(12),
-                    vertical: scale.getScaledHeight(6),
+                    horizontal: ResponsiveUtility.width(12),
                   ),
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xffB629FF) : const Color(0xffD9D9D9).withValues(alpha: 0.2),
+                    color: isSelected
+                        ? const Color(0xFF700095)
+                        : const Color(0xffD9D9D9).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     title,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black.withValues(alpha: 0.6),
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.black.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
-                      fontSize: scale.getScaledFont(13),
+                      fontSize: ResponsiveUtility.fontSize(12),
                     ),
                   ),
                 ),
@@ -412,7 +424,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     final canReject = isRequested && !hasPendingReschedule;
     final canApproveReschedule = hasPendingReschedule;
     final canRejectReschedule = hasPendingReschedule;
-    final canCancelAssignment = booking.canAdminCancelAssignment && !hasPendingReschedule;
+    final canCancelAssignment =
+        booking.canAdminCancelAssignment && !hasPendingReschedule;
 
     return Container(
       margin: EdgeInsets.only(bottom: scale.getScaledHeight(10)),
@@ -425,9 +438,9 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(9),
-              scale.getScaledWidth(10),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
+              scale.getScaledWidth(8),
               scale.getScaledHeight(8),
             ),
             child: Column(
@@ -437,33 +450,19 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            booking.serviceTitle,
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w700,
-                              fontSize: scale.getScaledFont(15),
-                            ),
-                          ),
-                          SizedBox(height: scale.getScaledHeight(2)),
-                          Text(
-                            'Booking ID: ${booking.bookingCode}',
-                            style: TextStyle(
-                              color: const Color(0xff00F2A4),
-                              fontSize: scale.getScaledFont(12),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        booking.serviceTitle,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w700,
+                          fontSize: scale.getScaledFont(12),
+                        ),
                       ),
                     ),
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: scale.getScaledWidth(10),
-                        vertical: scale.getScaledHeight(3),
+                        vertical: scale.getScaledHeight(2),
                       ),
                       decoration: BoxDecoration(
                         color: statusStyle.$1.withValues(alpha: 0.16),
@@ -483,26 +482,53 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: scale.getScaledHeight(4)),
+                SizedBox(height: scale.getScaledHeight(2)),
+                Text(
+                  'Booking ID: ${booking.bookingCode}',
+                  style: TextStyle(
+                    color: const Color(0xFF00A63E),
+                    fontWeight: FontWeight.w600,
+                    fontSize: scale.getScaledFont(10),
+                  ),
+                ),
+                SizedBox(height: scale.getScaledHeight(2)),
                 _line(scale, 'Customer ID: ${_customerCode(booking.userId)}'),
                 _line(scale, 'Event: ${booking.eventTypeName}'),
                 _line(scale, 'Plan: ${booking.planName}'),
                 _line(scale, 'Date & Time: ${_dateTimeLabel(booking)}'),
-                _line(scale, 'Venue: ${booking.venueName.isEmpty ? 'Not provided' : booking.venueName}',),
-                _line(scale, 'House / Plot / Hall: ${booking.venueHouseDetails.isEmpty ? 'Not provided' : booking.venueHouseDetails}',),
-                _line(scale, 'Landmark / Directions: ${booking.venueLandmarkDetails.isEmpty ? 'Not provided' : booking.venueLandmarkDetails}',),
+                if (hasPendingReschedule)
+                  _rescheduleRequestPanel(scale, booking),
+                _line(
+                  scale,
+                  'Venue: ${booking.venueName.isEmpty ? 'Not provided' : booking.venueName}',
+                ),
+                _line(
+                  scale,
+                  'House / Plot / Hall: ${booking.venueHouseDetails.isEmpty ? 'Not provided' : booking.venueHouseDetails}',
+                ),
+                _line(
+                  scale,
+                  'Landmark / Directions: ${booking.venueLandmarkDetails.isEmpty ? 'Not provided' : booking.venueLandmarkDetails}',
+                ),
                 _line(scale, 'Location: ${booking.locationLine}'),
-                _line(scale, 'Amount: Rs.${_formatAmount(booking.totalAmount)}', color: Colors.black, weight: FontWeight.w600,),
+                Text(
+                  'Amount: Rs.${_formatAmount(booking.totalAmount)}',
+                  style: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.72),
+                    fontWeight: FontWeight.bold,
+                    fontSize: scale.getScaledFont(12),
+                  ),
+                ),
               ],
             ),
           ),
           Container(height: 1, color: const Color(0xffD9D9D9)),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(7),
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(7),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,18 +539,43 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       : 'Payment: ${booking.paymentStatus}',
                   style: TextStyle(
                     color: Colors.black.withValues(alpha: 0.72),
+                    fontWeight: FontWeight.bold,
                     fontSize: scale.getScaledFont(12),
                   ),
                 ),
-                _line(scale, 'Total Booking Amount: Rs.${_formatAmount(booking.totalAmount)}',),
-                _line(scale, 'Amount Paid: Rs.${_formatAmount(booking.paidAmount)}',),
-                _line(scale, 'Remaining Amount: Rs.${_formatAmount(booking.remainingAmount)}',),
-                _line(scale, 'Coupon Discount: Rs.${_formatAmount(booking.discountAmount)}',),
-                _line(scale, 'GST Amount: Rs.${_formatAmount(booking.gstAmount)}',),
-                _line(scale, 'Platform Commission: Rs.${_formatAmount(booking.commissionAmount)}',),
-                _line(scale, 'Professional Earnings: Rs.${_formatAmount(booking.professionalPayoutAmount)}',),
+                _line(
+                  scale,
+                  'Total Booking Amount: Rs.${_formatAmount(booking.totalAmount)}',
+                ),
+                _line(
+                  scale,
+                  'Amount Paid: Rs.${_formatAmount(booking.paidAmount)}',
+                ),
+                _line(
+                  scale,
+                  'Remaining Amount: Rs.${_formatAmount(booking.remainingAmount)}',
+                ),
+                _line(
+                  scale,
+                  'Coupon Discount: Rs.${_formatAmount(booking.discountAmount)}',
+                ),
+                _line(
+                  scale,
+                  'GST Amount: Rs.${_formatAmount(booking.gstAmount)}',
+                ),
+                _line(
+                  scale,
+                  'Platform Commission: Rs.${_formatAmount(booking.commissionAmount)}',
+                ),
+                _line(
+                  scale,
+                  'Professional Earnings: Rs.${_formatAmount(booking.professionalPayoutAmount)}',
+                ),
                 if (booking.refundEligibility.isNotEmpty)
-                  _line(scale, 'Refund: ${booking.refundEligibility}${booking.refundPercentage > 0 ? ' (${booking.refundPercentage}%)' : ''}',),
+                  _line(
+                    scale,
+                    'Refund: ${booking.refundEligibility}${booking.refundPercentage > 0 ? ' (${booking.refundPercentage}%)' : ''}',
+                  ),
                 if (_adminTimerText(booking).isNotEmpty) ...[
                   SizedBox(height: scale.getScaledHeight(4)),
                   StreamBuilder<int>(
@@ -536,9 +587,9 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       final timerText = _adminTimerText(booking);
                       if (timerText.isEmpty) return const SizedBox.shrink();
                       return Text(
-                        'Timer: $timerText',
+                        'Booking Ends in: $timerText',
                         style: TextStyle(
-                          color: const Color(0xff12D86D),
+                          color: Color.fromARGB(255, 202, 0, 24),
                           fontWeight: FontWeight.w700,
                           fontSize: scale.getScaledFont(12),
                         ),
@@ -580,7 +631,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                         _smallActionBtn(
                           scale: scale,
                           title: 'Approve Reschedule',
-                          onTap: () => controller.approveReschedule(booking),
+                          onTap: () => _showApproveRescheduleDialog(booking),
                           color: const Color(0xffECECEF),
                           textColor: const Color(0xff42155E),
                           loading: isApproveRescheduleLoading,
@@ -667,7 +718,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: scale.getScaledHeight(2)),
       child: Text(
-        value,
+        '☉ $value',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
@@ -676,6 +727,51 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           fontWeight: weight,
           height: 1.32,
         ),
+      ),
+    );
+  }
+
+  Widget _rescheduleRequestPanel(
+    ScalingUtility scale,
+    AdminBookingRequest booking,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(
+        top: scale.getScaledHeight(6),
+        bottom: scale.getScaledHeight(6),
+      ),
+      padding: EdgeInsets.all(scale.getScaledWidth(8)),
+      decoration: BoxDecoration(
+        color: const Color(0xffFFF7E8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xffE4A026)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Reschedule Request',
+            style: TextStyle(
+              color: const Color(0xff7A4A00),
+              fontWeight: FontWeight.w800,
+              fontSize: scale.getScaledFont(12),
+            ),
+          ),
+          SizedBox(height: scale.getScaledHeight(4)),
+          _line(scale, 'Current: ${_dateTimeLabel(booking)}'),
+          _line(
+            scale,
+            'Requested: ${_dateTimeText(booking.rescheduleNewEventDate, booking.rescheduleNewEventTime)}',
+          ),
+          if (booking.rescheduleReason.isNotEmpty)
+            _line(scale, 'Reason: ${booking.rescheduleReason}'),
+          if (booking.rescheduleRequestedAt != null)
+            _line(
+              scale,
+              'Requested At: ${_dateTimeText(booking.rescheduleRequestedAt, '')}',
+            ),
+        ],
       ),
     );
   }
@@ -791,7 +887,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.pop(context, reasonController.text.trim()),
             child: const Text('Cancel & Refund'),
           ),
         ],
@@ -899,7 +996,39 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     if (value == null || value.trim().isEmpty) {
       return;
     }
+
     await controller.rejectReschedule(booking: booking, reason: value);
+  }
+
+  Future<void> _showApproveRescheduleDialog(AdminBookingRequest booking) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xff171129),
+        title: const Text(
+          'Approve Reschedule',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Approve this reschedule?\n\nCurrent: ${_dateTimeLabel(booking)}\nRequested: ${_dateTimeText(booking.rescheduleNewEventDate, booking.rescheduleNewEventTime)}\n\nExisting professional assignment may be cleared and the booking may require reassignment.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    await controller.approveReschedule(booking);
   }
 
   Future<void> _openAssignSheet(AdminBookingRequest booking) async {
@@ -1597,14 +1726,17 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
   }
 
   String _dateTimeLabel(AdminBookingRequest booking) {
-    final date = booking.eventDate;
+    return _dateTimeText(booking.eventDate, booking.eventTime);
+  }
+
+  String _dateTimeText(DateTime? date, String time) {
     final dateLabel = date == null
         ? 'Date not selected'
         : '${_monthLabel(date.month)} ${date.day}, ${date.year}';
-    if (booking.eventTime.isEmpty) {
+    if (time.trim().isEmpty) {
       return dateLabel;
     }
-    return '$dateLabel - ${booking.eventTime}';
+    return '$dateLabel - ${time.trim()}';
   }
 
   String _monthLabel(int month) {

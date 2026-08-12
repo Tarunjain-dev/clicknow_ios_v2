@@ -183,6 +183,7 @@ class ProfessionalBookingRecord {
     required this.bookingStatus,
     required this.bookingStage,
     required this.assignedProfessionalId,
+    required this.rescheduleRequest,
     required this.bookingStartTime,
     required this.bookingEndTime,
     required this.bookingDuration,
@@ -227,6 +228,7 @@ class ProfessionalBookingRecord {
   final String bookingStatus;
   final String bookingStage;
   final String assignedProfessionalId;
+  final Map<String, dynamic> rescheduleRequest;
   final DateTime? bookingStartTime;
   final DateTime? bookingEndTime;
   final int bookingDuration;
@@ -318,6 +320,7 @@ class ProfessionalBookingRecord {
       assignedProfessionalId: (data['assignedProfessionalId'] ?? '')
           .toString()
           .trim(),
+      rescheduleRequest: _asMap(data['rescheduleRequest']),
       bookingStartTime: _asDateTime(data['bookingStartTime']),
       bookingEndTime: _asDateTime(data['bookingEndTime']),
       bookingDuration: _asInt(data['bookingDuration']),

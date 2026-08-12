@@ -12,7 +12,7 @@ import 'package:get/get.dart';
 
 enum CustomerBookingViewMode { cart, checkout }
 
-class CustomerBookingsScreen extends StatelessWidget {
+class CustomerBookingsScreen extends StatefulWidget {
   const CustomerBookingsScreen({
     super.key,
     this.mode = CustomerBookingViewMode.cart,
@@ -20,7 +20,28 @@ class CustomerBookingsScreen extends StatelessWidget {
 
   final CustomerBookingViewMode mode;
 
-  bool get _isCheckout => mode == CustomerBookingViewMode.checkout;
+  @override
+  State<CustomerBookingsScreen> createState() => _CustomerBookingsScreenState();
+}
+
+class _CustomerBookingsScreenState extends State<CustomerBookingsScreen> {
+  late final TextEditingController _couponTextController;
+
+  bool get _isCheckout => widget.mode == CustomerBookingViewMode.checkout;
+
+  @override
+  void initState() {
+    super.initState();
+    _couponTextController = TextEditingController(
+      text: CustomerBookingController.instance.checkoutCouponCode.value,
+    );
+  }
+
+  @override
+  void dispose() {
+    _couponTextController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,8 +134,18 @@ class CustomerBookingsScreen extends StatelessWidget {
                               couponMessage: couponMessage,
                               onPaymentModeChanged: (mode) => bookingController
                                   .setCheckoutPaymentMode(mode),
-                              onCouponChanged:
-                                  bookingController.setCheckoutCouponCode,
+                              onCouponChanged: (value) {
+                                bookingController.setCheckoutCouponCode(value);
+                                final normalizedValue = value.trim();
+                                if (_couponTextController.text !=
+                                    normalizedValue) {
+                                  _couponTextController.text = normalizedValue;
+                                  _couponTextController
+                                      .selection = TextSelection.collapsed(
+                                    offset: _couponTextController.text.length,
+                                  );
+                                }
+                              },
                               onApplyCoupon:
                                   bookingController.applyCheckoutCoupon,
                               onDelete: (index, item) async {
@@ -594,13 +625,40 @@ class CustomerBookingsScreen extends StatelessWidget {
             _bulletText(scale, 'Date : ${_formatDate(item.eventDate)}', isDark),
             _bulletText(scale, 'Event type : ${item.eventTypeName}', isDark),
             _bulletText(scale, 'Price plan : ${item.planName}', isDark),
-            _bulletText(scale, 'Taxable amount : Rs.${_formatInt(item.basePrice)}', isDark,),
-            if (!_isLiveWeddingPainter(item.serviceCatalogId, item.serviceTitle))
-              _bulletText(scale, 'Duration : ${item.eventDurationHours} Hrs.', isDark,),
-            _bulletText(scale, 'Venue : ${item.venueName.isEmpty ? 'Not provided' : item.venueName}', isDark,),
-            _bulletText(scale, 'House / Plot / Hall : ${item.venueHouseDetails.isEmpty ? 'Not provided' : item.venueHouseDetails}', isDark,),
-            _bulletText(scale, 'Landmark / Directions : ${item.venueLandmarkDetails.isEmpty ? 'Not provided' : item.venueLandmarkDetails}', isDark,),
-            _bulletText(scale, 'Venue Address : ${location.isEmpty ? 'Not provided' : location}', isDark,),
+            _bulletText(
+              scale,
+              'Taxable amount : Rs.${_formatInt(item.basePrice)}',
+              isDark,
+            ),
+            if (!_isLiveWeddingPainter(
+              item.serviceCatalogId,
+              item.serviceTitle,
+            ))
+              _bulletText(
+                scale,
+                'Duration : ${item.eventDurationHours} Hrs.',
+                isDark,
+              ),
+            _bulletText(
+              scale,
+              'Venue : ${item.venueName.isEmpty ? 'Not provided' : item.venueName}',
+              isDark,
+            ),
+            _bulletText(
+              scale,
+              'House / Plot / Hall : ${item.venueHouseDetails.isEmpty ? 'Not provided' : item.venueHouseDetails}',
+              isDark,
+            ),
+            _bulletText(
+              scale,
+              'Landmark / Directions : ${item.venueLandmarkDetails.isEmpty ? 'Not provided' : item.venueLandmarkDetails}',
+              isDark,
+            ),
+            _bulletText(
+              scale,
+              'Venue Address : ${location.isEmpty ? 'Not provided' : location}',
+              isDark,
+            ),
           ],
         ),
         if (onCheckout != null) ...[
@@ -794,22 +852,22 @@ class CustomerBookingsScreen extends StatelessWidget {
     required ValueChanged<String> onCouponChanged,
     required Future<void> Function() onApplyCoupon,
   }) {
-    final appliedCode = (quote?.couponApplied == true
-            ? quote?.couponCode
-            : couponCode)
-        ?.trim();
-    final hasApplied = quote?.couponApplied == true && (appliedCode ?? '').isNotEmpty;
+    final appliedCode =
+        (quote?.couponApplied == true ? quote?.couponCode : couponCode)?.trim();
+    final hasApplied =
+        quote?.couponApplied == true && (appliedCode ?? '').isNotEmpty;
     return InkWell(
       onTap: quoteLoading
           ? null
           : () => _showCouponBottomSheet(
-                context: context,
-                scale: scale,
-                isDark: isDark,
-                couponCode: appliedCode ?? couponCode,
-                onCouponChanged: onCouponChanged,
-                onApplyCoupon: onApplyCoupon,
-              ),
+              context: context,
+              scale: scale,
+              isDark: isDark,
+              couponCode: appliedCode ?? couponCode,
+              couponTextController: _couponTextController,
+              onCouponChanged: onCouponChanged,
+              onApplyCoupon: onApplyCoupon,
+            ),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         width: double.infinity,
@@ -877,10 +935,16 @@ class CustomerBookingsScreen extends StatelessWidget {
     required ScalingUtility scale,
     required bool isDark,
     required String couponCode,
+    required TextEditingController couponTextController,
     required ValueChanged<String> onCouponChanged,
     required Future<void> Function() onApplyCoupon,
   }) async {
-    final controller = TextEditingController(text: couponCode);
+    if (couponTextController.text != couponCode) {
+      couponTextController.text = couponCode;
+      couponTextController.selection = TextSelection.collapsed(
+        offset: couponTextController.text.length,
+      );
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -888,132 +952,14 @@ class CustomerBookingsScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) => SafeArea(
-            child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              scale.getScaledWidth(16),
-              scale.getScaledHeight(16),
-              scale.getScaledWidth(16),
-              MediaQuery.of(sheetContext).viewInsets.bottom +
-                  scale.getScaledHeight(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Choose Coupon',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w800,
-                        fontSize: scale.getScaledFont(18),
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-                SizedBox(height: scale.getScaledHeight(8)),
-                ..._visibleCoupons.map(
-                  (coupon) => Padding(
-                    padding: EdgeInsets.only(bottom: scale.getScaledHeight(8)),
-                    child: ListTile(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isDark
-                              ? const Color(0xff2A2F65)
-                              : const Color(0xffE0DCE8),
-                        ),
-                      ),
-                      title: Text(
-                        coupon.code,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text(coupon.description),
-                      trailing: const Icon(Icons.add_circle_outline_rounded),
-                      onTap: () async {
-                        controller.text = coupon.code;
-                        setSheetState(() {});
-                        onCouponChanged(coupon.code);
-                        await onApplyCoupon();
-                        if (sheetContext.mounted) Navigator.pop(sheetContext);
-                      },
-                    ),
-                  ),
-                ),
-                SizedBox(height: scale.getScaledHeight(8)),
-                TextField(
-                  controller: controller,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: 'Enter coupon code',
-                    prefixIcon: const Icon(Icons.local_offer_outlined),
-                    suffixIcon: controller.text.trim().isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Clear coupon',
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: () async {
-                              controller.clear();
-                              setSheetState(() {});
-                              onCouponChanged('');
-                              await onApplyCoupon();
-                            },
-                          ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    setSheetState(() {});
-                    onCouponChanged(value);
-                  },
-                ),
-                SizedBox(height: scale.getScaledHeight(12)),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          controller.clear();
-                          onCouponChanged('');
-                          await onApplyCoupon();
-                          if (sheetContext.mounted) Navigator.pop(sheetContext);
-                        },
-                        child: const Text('Remove'),
-                      ),
-                    ),
-                    SizedBox(width: scale.getScaledWidth(10)),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          onCouponChanged(controller.text.trim().toUpperCase());
-                          await onApplyCoupon();
-                          if (sheetContext.mounted) Navigator.pop(sheetContext);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Apply'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            ),
-          ),
-        );
-      },
+      builder: (sheetContext) => _CouponSheet(
+        scale: scale,
+        isDark: isDark,
+        controller: couponTextController,
+        onCouponChanged: onCouponChanged,
+        onApplyCoupon: onApplyCoupon,
+      ),
     );
-    controller.dispose();
   }
 
   Widget _amountLine(
@@ -1127,7 +1073,7 @@ class CustomerBookingsScreen extends StatelessWidget {
 
   Widget _bulletText(ScalingUtility scale, String text, bool isDark) {
     return Text(
-      '- $text',
+      '☉ $text',
       style: TextStyle(
         color: isDark ? Colors.white.withValues(alpha: 0.64) : Colors.black54,
         fontSize: scale.getScaledFont(14),
@@ -1269,12 +1215,166 @@ class CustomerBookingsScreen extends StatelessWidget {
       () => CustomerServiceDetailScreen(
         config: config,
         initialBookingItem: item,
-        editingMode: mode,
+        editingMode: widget.mode,
         editingIndex: index,
       ),
     );
   }
 }
+
+// ─── Coupon bottom-sheet ────────────────────────────────────────────────────
+
+class _CouponSheet extends StatefulWidget {
+  const _CouponSheet({
+    required this.scale,
+    required this.isDark,
+    required this.controller,
+    required this.onCouponChanged,
+    required this.onApplyCoupon,
+  });
+
+  final ScalingUtility scale;
+  final bool isDark;
+  final TextEditingController controller;
+  final ValueChanged<String> onCouponChanged;
+  final Future<void> Function() onApplyCoupon;
+
+  @override
+  State<_CouponSheet> createState() => _CouponSheetState();
+}
+
+class _CouponSheetState extends State<_CouponSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final scale = widget.scale;
+    final isDark = widget.isDark;
+    final controller = widget.controller;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          scale.getScaledWidth(16),
+          scale.getScaledHeight(16),
+          scale.getScaledWidth(16),
+          MediaQuery.of(context).viewInsets.bottom + scale.getScaledHeight(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Choose Coupon',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w800,
+                    fontSize: scale.getScaledFont(18),
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            SizedBox(height: scale.getScaledHeight(8)),
+            ..._visibleCoupons.map(
+              (coupon) => Padding(
+                padding: EdgeInsets.only(bottom: scale.getScaledHeight(8)),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isDark
+                          ? const Color(0xff2A2F65)
+                          : const Color(0xffE0DCE8),
+                    ),
+                  ),
+                  title: Text(
+                    coupon.code,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(coupon.description),
+                  trailing: const Icon(Icons.add_circle_outline_rounded),
+                  onTap: () async {
+                    setState(() => controller.text = coupon.code);
+                    widget.onCouponChanged(coupon.code);
+                    await widget.onApplyCoupon();
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                ),
+              ),
+            ),
+            SizedBox(height: scale.getScaledHeight(8)),
+            StatefulBuilder(
+              builder: (_, setFieldState) => TextField(
+                controller: controller,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Enter coupon code',
+                  prefixIcon: const Icon(Icons.local_offer_outlined),
+                  suffixIcon: controller.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear coupon',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () async {
+                            controller.clear();
+                            setFieldState(() {});
+                            widget.onCouponChanged('');
+                            await widget.onApplyCoupon();
+                          },
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setFieldState(() {});
+                  widget.onCouponChanged(value);
+                },
+              ),
+            ),
+            SizedBox(height: scale.getScaledHeight(12)),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      controller.clear();
+                      widget.onCouponChanged('');
+                      await widget.onApplyCoupon();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: const Text('Remove'),
+                  ),
+                ),
+                SizedBox(width: scale.getScaledWidth(10)),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      widget.onCouponChanged(
+                        controller.text.trim().toUpperCase(),
+                      );
+                      await widget.onApplyCoupon();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Visible coupons ─────────────────────────────────────────────────────────
 
 class _VisibleCoupon {
   const _VisibleCoupon(this.code, this.description);

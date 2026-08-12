@@ -64,37 +64,35 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> with SingleTi
           scale: scale,
           activeRoute: AppRoutes.adminPaymentsRoute,
         ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _header(scale),
-              TabBar(
+        body: Column(
+          children: [
+            _header(scale),
+            TabBar(
+              controller: _tabController,
+              isScrollable: false,
+              indicatorColor: const Color(0xffB629FF),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: const Color(0xffB629FF),
+              unselectedLabelColor: Colors.black.withValues(alpha: 0.6),
+              tabs: const [
+                Tab(text: 'Revenue'),
+                Tab(text: 'Refunds'),
+                Tab(text: 'Payroll'),
+                Tab(text: 'Analytics'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
                 controller: _tabController,
-                isScrollable: false,
-                indicatorColor: const Color(0xffB629FF),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: const Color(0xffB629FF),
-                unselectedLabelColor: Colors.black.withValues(alpha: 0.6),
-                tabs: const [
-                  Tab(text: 'Revenue'),
-                  Tab(text: 'Refunds'),
-                  Tab(text: 'Payroll'),
-                  Tab(text: 'Analytics'),
+                children: [
+                  _paymentsTab(scale),
+                  _refundsTab(scale),
+                  _payrollTab(scale),
+                  _analyticsTab(scale),
                 ],
               ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _paymentsTab(scale),
-                    _refundsTab(scale),
-                    _payrollTab(scale),
-                    _analyticsTab(scale),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -104,7 +102,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> with SingleTi
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),

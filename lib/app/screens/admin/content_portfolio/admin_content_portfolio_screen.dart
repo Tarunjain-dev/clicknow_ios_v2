@@ -34,86 +34,84 @@ class AdminContentPortfolioScreen extends StatelessWidget {
           scale: scale,
           activeRoute: AppRoutes.adminContentPortfolioRoute,
         ),
-        body: SafeArea(
-          child: Column(
-            children: <Widget>[
-              _topBar(context, scale, controller),
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: _primary),
-                    );
-                  }
-
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      scale.getScaledWidth(14),
-                      scale.getScaledHeight(12),
-                      scale.getScaledWidth(14),
-                      scale.getScaledHeight(22),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        _heroSummary(scale, controller),
-                        SizedBox(height: scale.getScaledHeight(14)),
-                        _sectionShell(
-                          title: 'Company Story',
-                          subtitle: 'Text shown on the customer portfolio page.',
-                          icon: Icons.article_outlined,
-                          child: Column(
-                            children: <Widget>[
-                              _textAreaCard(
-                                title: 'About ClickNow',
-                                hint: 'Write about your company',
-                                controller: controller.aboutController,
-                                minLines: 4,
-                              ),
-                              const SizedBox(height: 12),
-                              _textAreaCard(
-                                title: 'Our Mission',
-                                hint: 'Write your mission statement',
-                                controller: controller.missionController,
-                                minLines: 3,
-                              ),
-                              const SizedBox(height: 12),
-                              _textAreaCard(
-                                title: 'Why Choose Us?',
-                                hint: 'One point per line',
-                                controller: controller.whyChooseController,
-                                minLines: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: scale.getScaledHeight(14)),
-                        _sectionShell(
-                          title: 'Service Media Library',
-                          subtitle: 'Upload service-wise customer portfolio photos and videos.',
-                          icon: Icons.collections_outlined,
-                          child: _serviceMediaGrid(
-                            context: context,
-                            scale: scale,
-                            controller: controller,
-                          ),
-                        ),
-                        SizedBox(height: scale.getScaledHeight(14)),
-                        _sectionShell(
-                          title: 'Detailed Media Manager',
-                          subtitle: 'Edit captions, thumbnails, order, visibility and delete media.',
-                          icon: Icons.tune_rounded,
-                          child: _mediaManager(context, scale, controller),
-                        ),
-                        SizedBox(height: scale.getScaledHeight(16)),
-                        _stickySaveButton(controller),
-                      ],
-                    ),
+        body: Column(
+          children: <Widget>[
+            _topBar(context, scale, controller),
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: _primary),
                   );
-                }),
-              ),
-            ],
-          ),
+                }
+        
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    scale.getScaledWidth(14),
+                    scale.getScaledHeight(12),
+                    scale.getScaledWidth(14),
+                    scale.getScaledHeight(22),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      _heroSummary(scale, controller),
+                      SizedBox(height: scale.getScaledHeight(14)),
+                      _sectionShell(
+                        title: 'Company Story',
+                        subtitle: 'Text shown on the customer portfolio page.',
+                        icon: Icons.article_outlined,
+                        child: Column(
+                          children: <Widget>[
+                            _textAreaCard(
+                              title: 'About ClickNow',
+                              hint: 'Write about your company',
+                              controller: controller.aboutController,
+                              minLines: 4,
+                            ),
+                            const SizedBox(height: 12),
+                            _textAreaCard(
+                              title: 'Our Mission',
+                              hint: 'Write your mission statement',
+                              controller: controller.missionController,
+                              minLines: 3,
+                            ),
+                            const SizedBox(height: 12),
+                            _textAreaCard(
+                              title: 'Why Choose Us?',
+                              hint: 'One point per line',
+                              controller: controller.whyChooseController,
+                              minLines: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: scale.getScaledHeight(14)),
+                      _sectionShell(
+                        title: 'Service Media Library',
+                        subtitle: 'Upload service-wise customer portfolio photos and videos.',
+                        icon: Icons.collections_outlined,
+                        child: _serviceMediaGrid(
+                          context: context,
+                          scale: scale,
+                          controller: controller,
+                        ),
+                      ),
+                      SizedBox(height: scale.getScaledHeight(14)),
+                      _sectionShell(
+                        title: 'Detailed Media Manager',
+                        subtitle: 'Edit captions, thumbnails, order, visibility and delete media.',
+                        icon: Icons.tune_rounded,
+                        child: _mediaManager(context, scale, controller),
+                      ),
+                      SizedBox(height: scale.getScaledHeight(16)),
+                      _stickySaveButton(controller),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );
@@ -127,7 +125,7 @@ class AdminContentPortfolioScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(10),
       ),
@@ -973,7 +971,7 @@ class AdminContentPortfolioScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: controller.services
+                      initialValue: controller.services
                               .any((service) => service.key == serviceId)
                           ? serviceId
                           : controller.services.first.key,

@@ -240,65 +240,112 @@ exports.createBookingDraft = functions.https.onRequest(
 
 exports.createPaymentOrder = functions.https.onRequest(
   paymentRequestHandler(async (data, uid) => {
-  await requireActiveAccount(uid, "customer");
-  const bookingId = clean(data.bookingId);
-  const paymentMode = normalizePaymentMode(data.paymentMode);
-  const couponCode = clean(data.couponCode).toUpperCase();
-  if (!bookingId) {
-    throw new functions.https.HttpsError("invalid-argument", "Booking id is required.");
-  }
+    let bookingId = "";
+    let paymentMode = "";
+    let couponCode = "";
+    try {
+      await requireActiveAccount(uid, "customer");
+      bookingId = clean(data.bookingId);
+      paymentMode = normalizePaymentMode(data.paymentMode);
+      couponCode = clean(data.couponCode).toUpperCase();
+      if (!bookingId) {
+        throw new functions.https.HttpsError("invalid-argument", "Booking id is required.");
+      }
+      console.log("[PaymentOrder] request", {
+        bookingId,
+        paymentMode,
+        couponCode,
+      });
 
-  const bookingSnap = await db.collection(COLLECTIONS.bookings).doc(bookingId).get();
-  const booking = requireBookingForCustomer(bookingSnap, uid);
-  const paymentStatus = clean(booking.paymentStatus).toUpperCase();
-  if (
-    ["PAID", "FULLY_PAID"].includes(paymentStatus) ||
-    ["PAID", "FULLY_PAID"].includes(clean(booking.payment?.status).toUpperCase())
-  ) {
-    throw new functions.https.HttpsError("failed-precondition", "Booking is already paid.");
-  }
-  if (paymentStatus === "PARTIALLY_PAID" || paymentStatus === "ADVANCE_PAID") {
-    throw new functions.https.HttpsError(
-      "failed-precondition",
-      "Please use remaining payment for this booking.",
-    );
-  }
+      const bookingSnap = await db.collection(COLLECTIONS.bookings).doc(bookingId).get();
+      const booking = requireBookingForCustomer(bookingSnap, uid);
+      const paymentStatus = clean(booking.paymentStatus).toUpperCase();
+      if (
+        ["PAID", "FULLY_PAID"].includes(paymentStatus) ||
+        ["PAID", "FULLY_PAID"].includes(clean(booking.payment?.status).toUpperCase())
+      ) {
+        throw new functions.https.HttpsError("failed-precondition", "Booking is already paid.");
+      }
+      if (paymentStatus === "PARTIALLY_PAID" || paymentStatus === "ADVANCE_PAID") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Please use remaining payment for this booking.",
+        );
+      }
 
-  const pricingBase = pricingBaseForBooking(booking);
-  if (pricingBase.serviceSubtotal <= 0) {
-    throw new functions.https.HttpsError("failed-precondition", "Booking amount is invalid.");
-  }
+      const pricingBase = pricingBaseForBooking(booking);
+      if (pricingBase.serviceSubtotal <= 0) {
+        throw new functions.https.HttpsError("failed-precondition", "Booking amount is invalid.");
+      }
 
-  const coupon = await resolveCoupon({
-    couponCode,
-    customerId: uid,
-    booking,
-    totalAmount: pricingBase.serviceSubtotal,
-  });
-  const quote = paymentQuote({
-    totalAmount: pricingBase.originalCustomerPayable,
-    serviceSubtotal: pricingBase.serviceSubtotal,
-    rateAmount: pricingBase.rateAmount,
-    quantityOrDuration: pricingBase.quantityOrDuration,
-    paymentMode,
-    discountAmount: coupon.discountAmount,
-    couponCode: coupon.appliedCode,
-  });
-  const orderCode = await nextHumanId("order", "ORD");
-  return createOrReuseOrder({
-    bookingId,
-    booking,
-    customerId: uid,
-    paymentMode,
-    paymentPhase: "INITIAL",
-    payableAmount: quote.payableAmount,
-    remainingAmount: quote.remainingAmount,
-    totalAmount: quote.originalCustomerPayable,
-    discountAmount: coupon.discountAmount,
-    couponCode: coupon.appliedCode,
-    pricingSnapshot: quote,
-    orderCode,
-  });
+      const couponConfig = couponCode ? staticCoupon(couponCode) : null;
+      console.log("[PaymentOrder] config loaded", {
+        bookingId,
+        couponCode,
+        staticCouponLoaded: couponConfig !== null,
+        couponActive: couponConfig?.active === true,
+        discountType: clean(couponConfig?.discountType),
+        hasRazorpayKeyId: Boolean(configuredRazorpayKeyId()),
+      });
+
+      const coupon = await resolveCoupon({
+        couponCode,
+        customerId: uid,
+        booking,
+        totalAmount: pricingBase.serviceSubtotal,
+      });
+      const quote = paymentQuote({
+        totalAmount: pricingBase.originalCustomerPayable,
+        serviceSubtotal: pricingBase.serviceSubtotal,
+        rateAmount: pricingBase.rateAmount,
+        quantityOrDuration: pricingBase.quantityOrDuration,
+        paymentMode,
+        discountAmount: coupon.discountAmount,
+        couponCode: coupon.appliedCode,
+      });
+      if (quote.payableAmount <= 0 || quote.finalAmount <= 0) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Payment amount is invalid after coupon calculation.",
+        );
+      }
+      console.log("[PaymentOrder] quote", {
+        bookingId,
+        paymentMode,
+        couponCode: coupon.appliedCode,
+        subtotal: pricingBase.serviceSubtotal,
+        discount: coupon.discountAmount,
+        taxableAmount: quote.taxableAmount,
+        finalAmount: quote.finalAmount,
+        payableAmount: quote.payableAmount,
+        amountPaise: rupeesToPaise(quote.payableAmount),
+      });
+      const orderCode = await nextHumanId("order", "ORD");
+      return createOrReuseOrder({
+        bookingId,
+        booking,
+        customerId: uid,
+        paymentMode,
+        paymentPhase: "INITIAL",
+        payableAmount: quote.payableAmount,
+        remainingAmount: quote.remainingAmount,
+        totalAmount: quote.originalCustomerPayable,
+        discountAmount: coupon.discountAmount,
+        couponCode: coupon.appliedCode,
+        pricingSnapshot: quote,
+        orderCode,
+      });
+    } catch (error) {
+      console.error("[PaymentOrder] error", {
+        bookingId,
+        paymentMode,
+        couponCode,
+        code: clean(error?.code),
+        message: clean(error?.message),
+        stack: clean(error?.stack),
+      });
+      throw error;
+    }
   }),
 );
 
@@ -308,6 +355,14 @@ exports.quoteCheckoutPayment = functions.https.onRequest(
   const paymentMode = normalizePaymentMode(data.paymentMode);
   const couponCode = clean(data.couponCode).toUpperCase();
     const pricing = await resolveAuthoritativeServicePricing(data);
+    console.log("[Coupon] quoteCheckoutPayment request", {
+      paymentMode,
+      couponCode,
+      serviceCatalogId: pricing.serviceCatalogId,
+      eventTypeId: pricing.eventTypeId,
+      planKey: clean(data.planKey),
+      subtotal: pricing.serviceSubtotal,
+    });
     const coupon = await resolveCoupon({
       couponCode,
       customerId: uid,
@@ -319,7 +374,7 @@ exports.quoteCheckoutPayment = functions.https.onRequest(
       },
       totalAmount: pricing.serviceSubtotal,
     });
-    return paymentQuote({
+    const quote = paymentQuote({
       totalAmount: pricing.originalCustomerPayable,
       serviceSubtotal: pricing.serviceSubtotal,
       rateAmount: pricing.rateAmount,
@@ -328,6 +383,14 @@ exports.quoteCheckoutPayment = functions.https.onRequest(
       discountAmount: coupon.discountAmount,
       couponCode: coupon.appliedCode,
     });
+    console.log("[Coupon] quoteCheckoutPayment result", {
+      couponCode: coupon.appliedCode,
+      discount: coupon.discountAmount,
+      subtotal: pricing.serviceSubtotal,
+      finalAmount: quote.finalAmount,
+      payableAmount: quote.payableAmount,
+    });
+    return quote;
   }),
 );
 
@@ -856,29 +919,129 @@ exports.requestBookingReschedule = functions.https.onRequest(
     if (!bookingId || !newEventDate || !newEventTime || !reason) {
       throw new functions.https.HttpsError("invalid-argument", "New date, time, and reason are required.");
     }
+    if (reason.length < 5 || reason.length > 500) {
+      throw new functions.https.HttpsError("invalid-argument", "Reason must be 5 to 500 characters.");
+    }
+    if (toMillis(newEventDate) <= Date.now()) {
+      throw new functions.https.HttpsError("invalid-argument", "Please select a future date and time.");
+    }
     const bookingRef = db.collection(COLLECTIONS.bookings).doc(bookingId);
+    const requestId = `RESCH-${bookingId.substring(0, 10)}-${Date.now()}`;
+    let notificationData = null;
     await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(bookingRef);
       const booking = requireBookingForCustomer(snapshot, uid);
-      if (["COMPLETED", "CANCELLED", "REJECTED"].includes(clean(booking.status).toUpperCase())) {
+      const ownerId = clean(booking.customerId || booking.userId || asObject(booking.customer).id);
+      if (ownerId !== uid) {
+        throw new functions.https.HttpsError("permission-denied", "You cannot access this booking.");
+      }
+      const existingRequest = asObject(booking.rescheduleRequest);
+      if (clean(existingRequest.status).toLowerCase() === "pending") {
+        throw new functions.https.HttpsError("failed-precondition", "You already have a pending reschedule request.");
+      }
+      const status = clean(booking.status || booking.bookingStatus || booking.lifecycleStatus).toUpperCase();
+      if (["COMPLETED", "CANCELLED", "CANCELED", "REJECTED", "REFUNDED"].includes(status)) {
         throw new functions.https.HttpsError("failed-precondition", "This booking cannot be rescheduled.");
       }
+      const currentEventDate = booking.eventDate || booking.scheduledDate || null;
+      const currentEventTime = clean(booking.eventTime);
+      if (
+        toMillis(currentEventDate) === toMillis(newEventDate) &&
+        currentEventTime.toLowerCase() === newEventTime.toLowerCase()
+      ) {
+        throw new functions.https.HttpsError("invalid-argument", "Please select a different date or time.");
+      }
       const now = FieldValue.serverTimestamp();
+      const oldProfessionalId = clean(
+        booking.assignedProfessionalId ||
+          booking.professionalId ||
+          booking.assignedToProfessionalId ||
+          asObject(booking.professional).uid,
+      );
       writeBookingCopies(transaction, bookingId, booking, {
         bookingStage: "reschedule_requested",
         rescheduleRequest: {
+          requestId,
           requestedBy: uid,
           requestedAt: now,
+          previousEventDate: currentEventDate,
+          previousScheduledDate: booking.scheduledDate || currentEventDate,
+          previousEventTime: currentEventTime,
+          previousBookingStage: clean(booking.bookingStage),
+          previousStatus: clean(booking.status),
+          previousBookingStatus: clean(booking.bookingStatus),
+          previousLifecycleStatus: clean(booking.lifecycleStatus),
+          previousProfessionalId: oldProfessionalId,
           newEventDate,
           newEventTime,
+          newScheduledDate: newEventDate,
           reason,
           status: "pending",
         },
         "statusTimeline.rescheduleRequestedAt": now,
         updatedAt: now,
       });
+      const auditRef = db.collection(COLLECTIONS.adminActionLogs).doc();
+      transaction.set(auditRef, {
+        logId: auditRef.id,
+        bookingId,
+        requestId,
+        action: "RESCHEDULE_REQUESTED",
+        performedByUserId: uid,
+        actorRole: "customer",
+        customerId: uid,
+        previousEventTime: currentEventTime,
+        newEventTime,
+        createdAt: now,
+      });
+      notificationData = {
+        bookingCode: clean(booking.bookingCode),
+        customerId: ownerId,
+        professionalId: oldProfessionalId,
+        serviceTitle: clean(booking.serviceTitle),
+      };
     });
-    return { ok: true, bookingId };
+    const adminRecipients = await adminNotificationRecipients();
+    const notificationPayload = {
+      bookingId,
+      requestId,
+      customerId: uid,
+      bookingCode: clean(notificationData?.bookingCode),
+      serviceTitle: clean(notificationData?.serviceTitle),
+      rescheduleStatus: "pending",
+      newEventDate: String(toMillis(newEventDate)),
+      newEventTime,
+      deepLinkRoute: "admin_booking_details",
+    };
+    await safeCreateAndSendNotification({
+      recipientIds: adminRecipients,
+      title: "New Reschedule Request",
+      body: `A customer requested a new date/time for booking #${clean(notificationData?.bookingCode) || bookingId}.`,
+      type: "booking_reschedule_requested",
+      source: "system",
+      data: {
+        ...notificationPayload,
+        recipientRole: "admin",
+      },
+      deepLinkRoute: "admin_booking_details",
+      idempotencyKey: `booking_reschedule_requested_${bookingId}_${requestId}_admin`,
+    });
+    if (clean(notificationData?.professionalId)) {
+      await safeCreateAndSendNotification({
+        recipientIds: [clean(notificationData.professionalId)],
+        title: "Reschedule Requested",
+        body: "The customer requested a new date/time for your booking.",
+        type: "booking_reschedule_requested",
+        source: "system",
+        data: {
+          ...notificationPayload,
+          recipientRole: "professional",
+        },
+        deepLinkRoute: "professional_booking_details",
+        idempotencyKey: `booking_reschedule_requested_${bookingId}_${requestId}_professional`,
+      });
+    }
+    return { ok: true, bookingId, requestId };
   }),
 );
 
@@ -1010,7 +1173,11 @@ exports.adminReviewBookingReschedule = functions.https.onRequest(
     if (!bookingId || !["APPROVE", "REJECT"].includes(action) || (action === "REJECT" && !reason)) {
       throw new functions.https.HttpsError("invalid-argument", "A valid reschedule review is required.");
     }
+    if (action === "REJECT" && (reason.length < 5 || reason.length > 500)) {
+      throw new functions.https.HttpsError("invalid-argument", "Rejection reason must be 5 to 500 characters.");
+    }
     const bookingRef = db.collection(COLLECTIONS.bookings).doc(bookingId);
+    let reviewNotificationData = null;
     await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(bookingRef);
       const booking = snapshot.data();
@@ -1022,7 +1189,21 @@ exports.adminReviewBookingReschedule = functions.https.onRequest(
         throw new functions.https.HttpsError("failed-precondition", "No pending reschedule request was found.");
       }
       const now = FieldValue.serverTimestamp();
-      const oldProfessionalId = clean(booking.assignedProfessionalId);
+      const requestId = clean(request.requestId) || `RESCH-${bookingId}`;
+      const customerId = clean(booking.customerId || booking.userId || asObject(booking.customer).id);
+      const oldProfessionalId = clean(
+        request.previousProfessionalId ||
+          booking.assignedProfessionalId ||
+          booking.professionalId ||
+          booking.assignedToProfessionalId ||
+          asObject(booking.professional).uid,
+      );
+      const previousBookingStage = clean(request.previousBookingStage) ||
+        clean(booking.bookingStage) ||
+        "booking_got_accepted_by_admin";
+      const previousStatus = clean(request.previousStatus || booking.status);
+      const previousBookingStatus = clean(request.previousBookingStatus || booking.bookingStatus);
+      const previousLifecycleStatus = clean(request.previousLifecycleStatus || booking.lifecycleStatus);
       if (action === "APPROVE") {
         writeBookingCopies(transaction, bookingId, booking, {
           status: "APPROVED",
@@ -1035,12 +1216,27 @@ exports.adminReviewBookingReschedule = functions.https.onRequest(
           assignedProfessionalId: "",
           assignedToProfessionalId: "",
           professionalId: "",
+          professionalUid: "",
+          assignedProfessionalName: "",
           professional: {},
-          assignment: {},
+          assignment: {
+            previousProfessionalId: oldProfessionalId,
+            clearedForReschedule: true,
+            clearedByAdminId: uid,
+            clearedAt: now,
+          },
+          assignmentStatus: "pending",
+          acceptedAt: FieldValue.delete(),
           professionalDecisionStatus: "pending",
           "rescheduleRequest.status": "approved",
+          "rescheduleRequest.reviewedBy": uid,
+          "rescheduleRequest.reviewedAt": now,
           "rescheduleRequest.approvedBy": uid,
           "rescheduleRequest.approvedAt": now,
+          "rescheduleRequest.rejectedBy": FieldValue.delete(),
+          "rescheduleRequest.rejectedAt": FieldValue.delete(),
+          "rescheduleRequest.rejectionReason": FieldValue.delete(),
+          "statusTimeline.rescheduleApprovedAt": now,
           updatedAt: now,
         });
         if (oldProfessionalId) {
@@ -1053,14 +1249,107 @@ exports.adminReviewBookingReschedule = functions.https.onRequest(
         }
       } else {
         writeBookingCopies(transaction, bookingId, booking, {
+          ...(clean(booking.bookingStage) === "reschedule_requested"
+            ? {
+                bookingStage: previousBookingStage,
+                status: previousStatus || booking.status,
+                bookingStatus: previousBookingStatus || booking.bookingStatus,
+                lifecycleStatus: previousLifecycleStatus || booking.lifecycleStatus,
+              }
+            : {}),
           "rescheduleRequest.status": "rejected",
+          "rescheduleRequest.reviewedBy": uid,
+          "rescheduleRequest.reviewedAt": now,
           "rescheduleRequest.rejectedBy": uid,
           "rescheduleRequest.rejectedAt": now,
           "rescheduleRequest.rejectionReason": reason,
+          "statusTimeline.rescheduleRejectedAt": now,
           updatedAt: now,
         });
       }
+      const auditRef = db.collection(COLLECTIONS.adminActionLogs).doc();
+      transaction.set(auditRef, {
+        logId: auditRef.id,
+        bookingId,
+        requestId,
+        action: action === "APPROVE" ? "RESCHEDULE_APPROVED" : "RESCHEDULE_REJECTED",
+        performedByAdminId: uid,
+        actorRole: "admin",
+        customerId,
+        professionalId: oldProfessionalId,
+        reason: action === "REJECT" ? reason : "",
+        createdAt: now,
+      });
+      reviewNotificationData = {
+        requestId,
+        customerId,
+        oldProfessionalId,
+        bookingCode: clean(booking.bookingCode),
+        serviceTitle: clean(booking.serviceTitle),
+        newEventDate: request.newEventDate,
+        newEventTime: clean(request.newEventTime),
+        rejectionReason: reason,
+      };
     });
+    const baseData = {
+      bookingId,
+      requestId: clean(reviewNotificationData?.requestId),
+      bookingCode: clean(reviewNotificationData?.bookingCode),
+      serviceTitle: clean(reviewNotificationData?.serviceTitle),
+      newEventDate: String(toMillis(reviewNotificationData?.newEventDate)),
+      newEventTime: clean(reviewNotificationData?.newEventTime),
+    };
+    if (action === "APPROVE") {
+      await safeCreateAndSendNotification({
+        recipientIds: [clean(reviewNotificationData?.customerId)],
+        title: "Reschedule Approved",
+        body: "Your booking reschedule request has been approved.",
+        type: "booking_reschedule_approved",
+        source: "system",
+        data: {
+          ...baseData,
+          recipientRole: "customer",
+          rescheduleStatus: "approved",
+          deepLinkRoute: "customer_booking_details",
+        },
+        deepLinkRoute: "customer_booking_details",
+        idempotencyKey: `booking_reschedule_approved_${bookingId}_${baseData.requestId}_customer`,
+      });
+      if (clean(reviewNotificationData?.oldProfessionalId)) {
+        await safeCreateAndSendNotification({
+          recipientIds: [clean(reviewNotificationData.oldProfessionalId)],
+          title: "Booking Schedule Changed",
+          body: "The booking schedule was changed and the booking will be reassigned.",
+          type: "booking_reschedule_approved",
+          source: "system",
+          data: {
+            ...baseData,
+            recipientRole: "professional",
+            rescheduleStatus: "approved",
+            deepLinkRoute: "professional_booking_details",
+          },
+          deepLinkRoute: "professional_booking_details",
+          idempotencyKey: `booking_reschedule_approved_${bookingId}_${baseData.requestId}_professional`,
+        });
+      }
+    } else {
+      await safeCreateAndSendNotification({
+        recipientIds: [clean(reviewNotificationData?.customerId)],
+        title: "Reschedule Request Rejected",
+        body: "Your booking reschedule request was not approved.",
+        type: "booking_reschedule_rejected",
+        source: "system",
+        data: {
+          ...baseData,
+          recipientRole: "customer",
+          rescheduleStatus: "rejected",
+          rejectionReason: clean(reviewNotificationData?.rejectionReason),
+          deepLinkRoute: "customer_booking_details",
+        },
+        deepLinkRoute: "customer_booking_details",
+        idempotencyKey: `booking_reschedule_rejected_${bookingId}_${baseData.requestId}_customer`,
+      });
+    }
     return { ok: true, bookingId, action };
   }),
 );
@@ -2196,38 +2485,6 @@ async function createOrReuseOrder({
   const paymentRef = db.collection(COLLECTIONS.payments).doc(bookingId);
   const paymentSnap = await paymentRef.get();
   const existing = paymentSnap.data();
-  const existingOrderStatus = clean(existing?.activePaymentStatus || existing?.paymentStatus)
-    .toUpperCase();
-  if (
-    existing &&
-    existingOrderStatus === "CREATED" &&
-    clean(existing.activeRazorpayOrderId) &&
-    positiveInt(existing.activePayableAmount) === payableAmount &&
-    clean(existing.paymentMode) === paymentMode &&
-    clean(existing.couponCode).toUpperCase() === clean(couponCode).toUpperCase()
-  ) {
-    return orderResponse({ bookingId, booking, payment: existing });
-  }
-
-  let order;
-  try {
-    order = await razorpayClient().orders.create({
-      amount: rupeesToPaise(payableAmount),
-      currency: "INR",
-      receipt: `${bookingId.substring(0, 24)}_${Date.now()}`,
-      payment_capture: 1,
-      notes: {
-        bookingId,
-        customerId,
-        paymentMode,
-        paymentPhase,
-      },
-    });
-  } catch (error) {
-    razorpayProviderError(error, "order creation");
-  }
-  const now = FieldValue.serverTimestamp();
-  const bookingPayment = asObject(booking.payment);
   const normalizedPaymentMode = clean(paymentMode).toUpperCase();
   const suppliedPricing = asObject(pricingSnapshot);
   const breakdown = Object.keys(suppliedPricing).length > 0
@@ -2239,9 +2496,68 @@ async function createOrReuseOrder({
         couponCode,
       });
   const effectivePayableAmount =
-    normalizedPaymentMode === "REMAINING" ? payableAmount : breakdown.payableAmount;
+    normalizedPaymentMode === "REMAINING" ? positiveInt(payableAmount) : positiveInt(breakdown.payableAmount);
   const effectiveRemainingAmount =
-    normalizedPaymentMode === "REMAINING" ? 0 : breakdown.remainingAmount;
+    normalizedPaymentMode === "REMAINING" ? 0 : positiveInt(breakdown.remainingAmount);
+  if (effectivePayableAmount <= 0) {
+    throw new functions.https.HttpsError("failed-precondition", "Payment amount is invalid.");
+  }
+  const existingOrderStatus = clean(existing?.activePaymentStatus || existing?.paymentStatus)
+    .toUpperCase();
+  if (
+    existing &&
+    existingOrderStatus === "CREATED" &&
+    clean(existing.activeRazorpayOrderId) &&
+    positiveInt(existing.activePayableAmount) === effectivePayableAmount &&
+    clean(existing.paymentMode) === normalizedPaymentMode &&
+    clean(existing.couponCode).toUpperCase() === clean(couponCode).toUpperCase()
+  ) {
+    return orderResponse({ bookingId, booking, payment: existing });
+  }
+
+  let order;
+  try {
+    console.log("[PaymentOrder] Razorpay order creation", {
+      bookingId,
+      paymentMode: normalizedPaymentMode,
+      couponCode: clean(couponCode),
+      payableAmount: effectivePayableAmount,
+      amountPaise: rupeesToPaise(effectivePayableAmount),
+    });
+    order = await razorpayClient().orders.create({
+      amount: rupeesToPaise(effectivePayableAmount),
+      currency: "INR",
+      receipt: `${bookingId.substring(0, 24)}_${Date.now()}`,
+      payment_capture: 1,
+      notes: {
+        bookingId,
+        customerId,
+        paymentMode: normalizedPaymentMode,
+        paymentPhase,
+      },
+    });
+  } catch (error) {
+    console.error("[PaymentOrder] error", {
+      bookingId,
+      paymentMode: normalizedPaymentMode,
+      couponCode: clean(couponCode),
+      code: clean(error?.code || error?.error?.code),
+      message: clean(error?.message || error?.error?.description),
+      stack: clean(error?.stack),
+    });
+    razorpayProviderError(error, "order creation");
+  }
+  console.log("[PaymentOrder] Razorpay order creation", {
+    bookingId,
+    orderId: clean(order.id),
+    amountPaise: positiveInt(order.amount),
+    paymentMode: normalizedPaymentMode,
+    couponCode: clean(couponCode),
+    discountAmount: positiveInt(discountAmount),
+    payableAmount: effectivePayableAmount,
+  });
+  const now = FieldValue.serverTimestamp();
+  const bookingPayment = asObject(booking.payment);
   const existingPaymentStatus = clean(
     existing?.paymentStatus ||
       booking.paymentStatus ||
@@ -2530,6 +2846,7 @@ async function resolveCoupon({ couponCode, customerId, booking, totalAmount }) {
     throw new functions.https.HttpsError("failed-precondition", "Coupon is locked for this booking.");
   }
   const coupon = staticCoupon(couponCode);
+  const isStaticCoupon = coupon !== null;
   if (!coupon || coupon.active === false) {
     throw new functions.https.HttpsError("failed-precondition", "Invalid coupon code.");
   }
@@ -2582,7 +2899,7 @@ async function resolveCoupon({ couponCode, customerId, booking, totalAmount }) {
   const customerUsage = asObject(coupon.customerUsage);
   const legacyUsageCount = positiveInt(customerUsage[customerId]);
   const perCustomerLimit = positiveInt(
-    coupon.perCustomerLimit || (staticConfig ? 0 : 1),
+    coupon.perCustomerLimit || (isStaticCoupon ? 0 : 1),
   );
   if (perCustomerLimit > 0 && legacyUsageCount >= perCustomerLimit) {
     throw new functions.https.HttpsError(
@@ -2614,59 +2931,74 @@ async function resolveCoupon({ couponCode, customerId, booking, totalAmount }) {
     discountAmount = Math.min(discountAmount, maxDiscountAmount);
   }
   discountAmount = Math.max(0, Math.min(Math.max(0, totalAmount - 1), discountAmount));
+  console.log("[Coupon] resolveCoupon result", {
+    couponCode,
+    discountType,
+    discountValue,
+    totalAmount,
+    discountAmount,
+    staticCoupon: isStaticCoupon,
+  });
   return { appliedCode: couponCode, discountAmount };
 }
 
+const staticCouponData = {
+  CLICKNOW10: {
+    active: true,
+    discountType: "PERCENT",
+    discountValue: 10,
+    maxDiscountAmount: 1500,
+    minOrderAmount: 0,
+    serviceCatalogIds: [],
+    firstTimeOnly: true,
+    perCustomerLimit: 1,
+    showOnUi: true,
+  },
+  STEALDEAL5: {
+    active: true,
+    discountType: "PERCENT",
+    discountValue: 5,
+    maxDiscountAmount: 0,
+    minOrderAmount: 0,
+    serviceCatalogIds: [],
+    perCustomerLimit: 2,
+    showOnUi: true,
+  },
+  ACT500: {
+    active: true,
+    discountType: "FLAT",
+    discountValue: 500,
+    minOrderAmount: 2000,
+    serviceCatalogIds: ["magician", "anchor", "musician"],
+    showOnUi: true,
+  },
+  TALENT1000: {
+    active: true,
+    discountType: "FLAT",
+    discountValue: 1000,
+    minOrderAmount: 8000,
+    serviceCatalogIds: ["live_painter"],
+    showOnUi: true,
+  },
+  MOH1000: {
+    active: true,
+    discountType: "FLAT",
+    discountValue: 1000,
+    minOrderAmount: 5000,
+    serviceCatalogIds: [],
+    showOnUi: false,
+  },
+};
+
 function staticCoupon(couponCode) {
-  const coupons = {
-    CLICKNOW10: {
-      active: true,
-      discountType: "PERCENT",
-      discountValue: 10,
-      maxDiscountAmount: 1500,
-      minOrderAmount: 0,
-      serviceCatalogIds: [],
-      firstTimeOnly: true,
-      perCustomerLimit: 1,
-      showOnUi: true,
-    },
-    STEALDEAL5: {
-      active: true,
-      discountType: "PERCENT",
-      discountValue: 5,
-      maxDiscountAmount: 0,
-      minOrderAmount: 0,
-      serviceCatalogIds: [],
-      perCustomerLimit: 2,
-      showOnUi: true,
-    },
-    ACT500: {
-      active: true,
-      discountType: "FLAT",
-      discountValue: 500,
-      minOrderAmount: 2000,
-      serviceCatalogIds: ["magician", "anchor", "musician"],
-      showOnUi: true,
-    },
-    TALENT1000: {
-      active: true,
-      discountType: "FLAT",
-      discountValue: 1000,
-      minOrderAmount: 8000,
-      serviceCatalogIds: ["live_painter"],
-      showOnUi: true,
-    },
-    MOH1000: {
-      active: true,
-      discountType: "FLAT",
-      discountValue: 1000,
-      minOrderAmount: 5000,
-      serviceCatalogIds: [],
-      showOnUi: false,
-    },
-  };
-  return coupons[couponCode] || null;
+  return staticCouponData[couponCode] || null;
 }
+
+function staticConfig(couponCode) {
+  return staticCoupon(couponCode);
+}
+
+Object.assign(staticConfig, staticCouponData);
 
 function couponServiceMatches(booking, allowedServices) {
   const searchable = [
@@ -3411,10 +3743,26 @@ async function createAndSendNotification({
   deepLinkRoute = "",
   sentByAdminId = "",
   campaignId = "",
+  idempotencyKey = "",
 }) {
   const recipients = [...new Set((recipientIds || []).map(clean).filter(Boolean))];
   if (recipients.length === 0) {
     return { totalTokens: 0, successCount: 0, failureCount: 0 };
+  }
+  const dedupeKey = clean(idempotencyKey);
+  if (dedupeKey) {
+    const existingChecks = await Promise.all(
+      recipients.map((uid) =>
+        db.collection(COLLECTIONS.users)
+          .doc(uid)
+          .collection("notifications")
+          .doc(`${dedupeKey}_${uid}`)
+          .get(),
+      ),
+    );
+    if (existingChecks.length > 0 && existingChecks.every((doc) => doc.exists)) {
+      return { totalTokens: 0, successCount: 0, failureCount: 0, deduped: true };
+    }
   }
   const notificationPayload = {
     title: clean(title),
@@ -3436,11 +3784,16 @@ async function createAndSendNotification({
   const tokens = [];
   for (const uid of recipients) {
     const userRef = db.collection(COLLECTIONS.users).doc(uid);
-    batch.set(userRef.collection("notifications").doc(), {
+    const notificationRef = dedupeKey
+      ? userRef.collection("notifications").doc(`${dedupeKey}_${uid}`)
+      : userRef.collection("notifications").doc();
+    batch.set(notificationRef, {
       ...notificationPayload,
+      notificationId: notificationRef.id,
+      idempotencyKey: dedupeKey,
       recipientId: uid,
       recipientRole: clean(data.recipientRole),
-    });
+    }, { merge: Boolean(dedupeKey) });
     writeCount += 1;
     if (writeCount >= 450) {
       batches.push(batch.commit());

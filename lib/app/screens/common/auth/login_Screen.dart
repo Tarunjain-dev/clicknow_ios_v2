@@ -28,68 +28,65 @@ class LoginScreen extends StatelessWidget {
     /// -- Dark Mode instance
     HelperFunctions.isDarkMode(context);
 
-    return SafeArea(
-      child: Container(
-        height: double.maxFinite,
-        width: double.maxFinite,
-        decoration: BoxDecoration(
-          gradient: isDark ? AppColors.primaryGradient : null,
-          color:  isDark ? null : Colors.white,
-        ),
-        child: Scaffold(
-          backgroundColor: AppColors.transparent,
-          resizeToAvoidBottomInset: true,
+    return Container(
+      height: double.maxFinite,
+      width: double.maxFinite,
+      decoration: BoxDecoration(
+        gradient: isDark ? AppColors.primaryGradient : null,
+        color:  isDark ? null : Colors.white,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        resizeToAvoidBottomInset: true,
+        body: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          physics: AlwaysScrollableScrollPhysics(),
+          padding: ResponsiveUtility.symmetric(vertical: 56, horizontal: 16),
+          child: Column(
+            children: [
 
-          body: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            physics: AlwaysScrollableScrollPhysics(),
-            padding: ResponsiveUtility.symmetric(vertical: 10, horizontal: 15),
-            child: Column(
-              children: [
+              /// --  Guest Login 'X' Button
+              Align(
+                alignment: Alignment.topRight,
+                child: Obx(() {
+                  // -- when not to show the Guest Login 'X' button
+                  if (!authController.showGuestSection.value || authController.showOtp.value) return const SizedBox();
+                  return Container(
+                    height: ResponsiveUtility.height(36),
+                    width: ResponsiveUtility.width(36),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: isDark ? Color(0xff323232) : Colors.grey.shade300,),
+                      shape: BoxShape.circle,
+                      color: isDark ? Color(0xff2F2F2F).withValues(alpha: 0.8) : Colors.white,
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: authController.continueAsGuest,
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark ? Color(0xff7A7A7A) : Colors.grey,
+                        size: ResponsiveUtility.width(18),),
+                    ),
+                  );
+                }),
+              ),
+              SizedBox(height: ResponsiveUtility.height(10),),
 
-                /// --  Guest Login 'X' Button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Obx(() {
-                    // -- when not to show the Guest Login 'X' button
-                    if (!authController.showGuestSection.value || authController.showOtp.value) return const SizedBox();
-                    return Container(
-                      height: ResponsiveUtility.height(36),
-                      width: ResponsiveUtility.width(36),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: isDark ? Color(0xff323232) : Colors.grey.shade300,),
-                        shape: BoxShape.circle,
-                        color: isDark ? Color(0xff2F2F2F).withValues(alpha: 0.8) : Colors.white,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: authController.continueAsGuest,
-                        icon: Icon(
-                          Icons.close,
-                          color: isDark ? Color(0xff7A7A7A) : Colors.grey,
-                          size: ResponsiveUtility.width(18),),
-                      ),
-                    );
-                  }),
+              /// -- Auth Screen Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
+                child: Image.asset(
+                  AppImages.authImage,
+                  fit: BoxFit.cover,
+                  height: ResponsiveUtility.height(240),
+                  width: double.infinity,
                 ),
-                SizedBox(height: ResponsiveUtility.height(10),),
+              ),
+              SizedBox(height: ResponsiveUtility.height(22),),
 
-                /// -- Auth Screen Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(ResponsiveUtility.radius(10)),
-                  child: Image.asset(
-                    AppImages.authImage,
-                    fit: BoxFit.cover,
-                    height: ResponsiveUtility.height(240),
-                    width: double.infinity,
-                  ),
-                ),
-                SizedBox(height: ResponsiveUtility.height(22),),
-
-                /// -- body
-                _BodyContent(),
-              ],
-            ),
+              /// -- body
+              _BodyContent(),
+            ],
           ),
         ),
       ),
@@ -163,7 +160,6 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
   }
 
   Widget buildOtpBox(int index, {required bool isDark}) {
-
     return Container(
       height: ResponsiveUtility.height(50),
       width: ResponsiveUtility.width(45),
@@ -210,23 +206,22 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
         Text(
           "Get in to your account",
           style: TextStyle(
-            fontSize: ResponsiveUtility.fontSize(28),
+            fontSize: ResponsiveUtility.fontSize(26),
             fontWeight: FontWeight.bold,
             color: isDark ? AppColors.white : AppColors.black,
           ),
         ),
-        SizedBox(height: ResponsiveUtility.height(8)),
 
         /// -- Auth Screen Sub-Title
         Text(
-          "We need to register your phone number before getting started..",
+          "Get started using your phone number.",
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: ResponsiveUtility.fontSize(12),
             color: isDark ? AppColors.white.withValues(alpha: 0.6) : AppColors.grey,
           ),
         ),
-        SizedBox(height: ResponsiveUtility.height(25)),
+        SizedBox(height: ResponsiveUtility.height(20)),
 
         /// -- Phone number and country code input field section.
         Row(
@@ -277,8 +272,7 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
           ],
         ),
 
-        SizedBox(height: ResponsiveUtility.height(16)),
-
+        SizedBox(height: ResponsiveUtility.height(14)),
         Obx(() {
           final showOtp = controller.showOtp.value;
           return Column(
@@ -286,7 +280,7 @@ class _BodyContentState extends State<_BodyContent> with CodeAutoFill{
               if(!showOtp)
                 SizedBox(
                   width: double.infinity,
-                  height: ResponsiveUtility.height(50),
+                  height: ResponsiveUtility.height(44),
                   child: ElevatedButton(
                     onPressed: controller.isLoading.value ? null : controller.requestOtp,
                     style: ElevatedButton.styleFrom(

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:clicknow_version2/app/routes/appRoutes.dart';
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
-import 'package:clicknow_version2/app/screens/customer/home/customer_booking_status_screen.dart';
+import 'package:clicknow_version2/app/screens/customer/home/customer_booking_details_screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/customer_notifications_screen.dart';
 import 'package:clicknow_version2/app/screens/professional/professionalDashboard/home/professional_notifications_screen.dart';
 import 'package:clicknow_version2/app/services/rbac_service.dart';
@@ -339,6 +339,10 @@ class FcmNotificationService {
       return;
     }
     if (role == RbacDecision.roleAdmin) {
+      if (type.startsWith('booking_reschedule_') || route.contains('booking')) {
+        Get.offNamed(AppRoutes.adminBookingsRoute);
+        return;
+      }
       Get.offNamed(AppRoutes.adminNotificationsRoute);
       return;
     }

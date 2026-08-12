@@ -50,7 +50,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                         fontSize: ResponsiveUtility.fontSize(18),
                       ),
                     ),
-                    SizedBox(height: ResponsiveUtility.height(8)),
+                    // SizedBox(height: ResponsiveUtility.height(8)),
                     Text(
                       'View and manage your event bookings',
                       style: TextStyle(
@@ -78,8 +78,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                     padding: ResponsiveUtility.symmetric(horizontal: 12),
                     scrollDirection: Axis.horizontal,
                     itemCount: controller.tabs.length,
-                    separatorBuilder: (context, separatorIndex) =>
-                        SizedBox(width: ResponsiveUtility.width(8)),
+                    separatorBuilder: (context, separatorIndex) => SizedBox(width: ResponsiveUtility.width(8)),
                     itemBuilder: (_, index) {
                       final selected = selectedTabIndex == index;
                       final count = controller.countForTabIndex(index);
@@ -91,7 +90,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               padding: EdgeInsets.symmetric(
-                                horizontal: ResponsiveUtility.width(14),
+                                horizontal: ResponsiveUtility.width(12),
                               ),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -113,7 +112,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                                       ? Colors.white
                                       : Colors.black.withValues(alpha: 0.6),
                                   fontWeight: FontWeight.w600,
-                                  fontSize: ResponsiveUtility.fontSize(14),
+                                  fontSize: ResponsiveUtility.fontSize(12),
                                 ),
                               ),
                             ),
@@ -135,12 +134,14 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                                     color: Color(0xffFF2F43),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Text(
-                                    count > 99 ? '99+' : '$count',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: scale.getScaledFont(10),
+                                  child: Center(
+                                    child: Text(
+                                      count > 99 ? '99+' : '$count',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: scale.getScaledFont(10),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -179,8 +180,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                       scale.getScaledHeight(12),
                     ),
                     itemCount: items.length,
-                    separatorBuilder: (context, separatorIndex) =>
-                        SizedBox(height: scale.getScaledHeight(10)),
+                    separatorBuilder: (context, separatorIndex) => SizedBox(height: scale.getScaledHeight(10)),
                     itemBuilder: (_, index) {
                       final item = items[index];
                       return InkWell(
@@ -262,9 +262,9 @@ class ProfessionalBookingsScreen extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(10),
-              scale.getScaledWidth(10),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
+              scale.getScaledWidth(8),
               scale.getScaledHeight(8),
             ),
             child: Row(
@@ -275,7 +275,7 @@ class ProfessionalBookingsScreen extends StatelessWidget {
                     style: TextStyle(
                       color: isDark ? Colors.white : Colors.black,
                       fontWeight: FontWeight.w600,
-                      fontSize: scale.getScaledFont(14),
+                      fontSize: scale.getScaledFont(12),
                     ),
                   ),
                 ),
@@ -369,12 +369,12 @@ class ProfessionalBookingsScreen extends StatelessWidget {
 
   Widget _point(ScalingUtility scale, String text, bool isDark) {
     return Text(
-      '- $text',
+      '☉ $text',
       style: TextStyle(
         color: isDark
             ? Colors.white.withValues(alpha: 0.65)
             : Colors.black.withValues(alpha: 0.65),
-        fontSize: scale.getScaledFont(14),
+        fontSize: scale.getScaledFont(12),
       ),
     );
   }

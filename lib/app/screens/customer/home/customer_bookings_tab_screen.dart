@@ -1,8 +1,9 @@
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
 import 'package:clicknow_version2/app/screens/customer/getx/customer_bookings_tab_controller.dart';
-import 'package:clicknow_version2/app/screens/customer/home/customer_booking_status_screen.dart';
+import 'package:clicknow_version2/app/screens/customer/home/customer_booking_details_screen.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
 import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
+import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -33,11 +34,11 @@ class CustomerBookingsTabScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  scale.getScaledWidth(16),
-                  scale.getScaledHeight(18),
-                  scale.getScaledWidth(16),
-                  scale.getScaledHeight(10),
+                padding: ResponsiveUtility.only(
+                  left: 16,
+                  top: 18,
+                  right: 16,
+                  bottom: 10,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,17 +48,17 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w700,
-                        fontSize: scale.getScaledFont(19),
+                        fontSize: ResponsiveUtility.fontSize(18),
                       ),
                     ),
-                    SizedBox(height: scale.getScaledHeight(4)),
+                    // SizedBox(height: scale.getScaledHeight(4)),
                     Text(
                       'View and manage your event bookings',
                       style: TextStyle(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.68)
                             : Colors.black.withValues(alpha: 0.68),
-                        fontSize: scale.getScaledFont(13),
+                        fontSize: ResponsiveUtility.fontSize(12),
                       ),
                     ),
                   ],
@@ -69,20 +70,19 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                     ? Colors.white.withValues(alpha: 0.2)
                     : Colors.black.withValues(alpha: 0.2),
               ),
-              SizedBox(height: scale.getScaledHeight(10)),
+              SizedBox(height: ResponsiveUtility.height(10)),
               SizedBox(
-                height: scale.getScaledHeight(50),
+                height: ResponsiveUtility.height(50),
                 child: Obx(() {
                   final selectedTabIndex = controller.selectedTabIndex.value;
                   return ListView.separated(
                     padding: EdgeInsets.symmetric(
-                      horizontal: scale.getScaledWidth(10),
-                      vertical: scale.getScaledHeight(6),
+                      horizontal: ResponsiveUtility.width(10),
+                      vertical: ResponsiveUtility.height(6),
                     ),
                     scrollDirection: Axis.horizontal,
                     itemCount: controller.tabs.length,
-                    separatorBuilder: (context, separatorIndex) =>
-                        SizedBox(width: scale.getScaledWidth(8)),
+                    separatorBuilder: (context, separatorIndex) => SizedBox(width: ResponsiveUtility.width(8)),
                     itemBuilder: (_, index) {
                       final selected = selectedTabIndex == index;
                       final count = controller.countForTabIndex(index);
@@ -94,7 +94,7 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               padding: EdgeInsets.symmetric(
-                                horizontal: scale.getScaledWidth(14),
+                                horizontal: ResponsiveUtility.width(12),
                               ),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -116,22 +116,22 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                                       ? Colors.white
                                       : Colors.black.withValues(alpha: 0.5),
                                   fontWeight: FontWeight.w600,
-                                  fontSize: scale.getScaledFont(15),
+                                  fontSize: ResponsiveUtility.fontSize(12),
                                 ),
                               ),
                             ),
                             if (count > 0)
                               Positioned(
-                                right: -scale.getScaledWidth(6),
-                                top: -scale.getScaledHeight(6),
+                                right: -ResponsiveUtility.width(6),
+                                top: -ResponsiveUtility.height(6),
                                 child: Container(
                                   constraints: BoxConstraints(
-                                    minWidth: scale.getScaledWidth(16),
-                                    minHeight: scale.getScaledHeight(16),
+                                    minWidth: ResponsiveUtility.width(16),
+                                    minHeight: ResponsiveUtility.height(16),
                                   ),
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: scale.getScaledWidth(4),
-                                    vertical: scale.getScaledHeight(1),
+                                    horizontal: ResponsiveUtility.width(4),
+                                    vertical: ResponsiveUtility.height(1),
                                   ),
                                   alignment: Alignment.center,
                                   decoration: const BoxDecoration(
@@ -143,7 +143,7 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: scale.getScaledFont(10),
+                                      fontSize: ResponsiveUtility.fontSize(10),
                                     ),
                                   ),
                                 ),
@@ -155,7 +155,7 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                   );
                 }),
               ),
-              SizedBox(height: scale.getScaledHeight(10)),
+              SizedBox(height: ResponsiveUtility.height(10)),
               Expanded(
                 child: Obx(() {
                   if (authController.isGuestUser.value) {
@@ -214,8 +214,7 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                       scale.getScaledHeight(12),
                     ),
                     itemCount: items.length,
-                    separatorBuilder: (context, separatorIndex) =>
-                        SizedBox(height: scale.getScaledHeight(10)),
+                    separatorBuilder: (context, separatorIndex) => SizedBox(height: scale.getScaledHeight(10)),
                     itemBuilder: (_, index) {
                       final item = items[index];
                       return InkWell(
@@ -313,10 +312,10 @@ class CustomerBookingsTabScreen extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(10),
-              scale.getScaledWidth(10),
-              scale.getScaledHeight(2),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
+              scale.getScaledWidth(8),
+              scale.getScaledHeight(8),
             ),
             child: Row(
               children: [
@@ -332,12 +331,12 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale.getScaledWidth(12),
-                    vertical: scale.getScaledHeight(4),
+                    horizontal: scale.getScaledWidth(10),
+                    vertical: scale.getScaledHeight(2),
                   ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: statusColor),
                   ),
                   child: Text(
@@ -345,7 +344,7 @@ class CustomerBookingsTabScreen extends StatelessWidget {
                     style: TextStyle(
                       color: statusColor,
                       fontWeight: FontWeight.w600,
-                      fontSize: scale.getScaledFont(10),
+                      fontSize: scale.getScaledFont(12),
                     ),
                   ),
                 ),
@@ -420,12 +419,12 @@ class CustomerBookingsTabScreen extends StatelessWidget {
 
   Widget _point(ScalingUtility scale, String text, bool isDark) {
     return Text(
-      '- $text',
+      '☉ $text',
       style: TextStyle(
         color: isDark
             ? Colors.white.withValues(alpha: 0.65)
             : Colors.black.withValues(alpha: 0.65),
-        fontSize: scale.getScaledFont(14),
+        fontSize: scale.getScaledFont(12),
       ),
     );
   }

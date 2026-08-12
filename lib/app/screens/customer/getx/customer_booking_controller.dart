@@ -519,7 +519,14 @@ class CustomerBookingController extends GetxController {
   }
 
   Future<void> applyCheckoutCoupon() async {
+    debugPrint('[Coupon] Applying coupon: "${checkoutCouponCode.value}"');
     await refreshCheckoutPaymentQuote(showMessage: true);
+    final q = checkoutPaymentQuote.value;
+    if (q != null) {
+      debugPrint('[Coupon] Result: applied=${q.couponApplied} code="${q.couponCode}" '
+          'discount=${q.discountAmount} subtotal=${q.netAmount} '
+          'taxable=${q.taxableAmount} final=${q.finalAmount} payable=${q.payableAmount}');
+    }
   }
 
   Future<void> refreshCheckoutPaymentQuote({bool showMessage = false}) async {
@@ -691,12 +698,32 @@ class CustomerBookingController extends GetxController {
     if (results.isEmpty) {
       throw StateError('No booking was created for payment.');
     }
+    // Use the coupon code validated by the quote, not the raw text input.
+    final quote = checkoutPaymentQuote.value;
+    final validatedCouponCode =
+        (quote?.couponApplied == true ? quote?.couponCode : null) ??
+        checkoutCouponCode.value;
+    final paymentMode = checkoutPaymentMode.value;
+
+    debugPrint('[Checkout] Starting payment: mode=${paymentMode.code} '
+        'coupon="$validatedCouponCode" bookings=${results.length}');
+    if (quote != null) {
+      debugPrint('[Checkout] Quote: subtotal=${quote.netAmount} '
+          'discount=${quote.discountAmount} final=${quote.finalAmount} '
+          'payable=${quote.payableAmount}');
+    }
+
     for (final result in results) {
+      debugPrint('[Payment] Creating order: bookingId=${result.bookingId} coupon="$validatedCouponCode"');
       final order = await _paymentService.createPaymentOrder(
         bookingId: result.bookingId,
-        paymentMode: checkoutPaymentMode.value,
-        couponCode: checkoutCouponCode.value,
+        paymentMode: paymentMode,
+        couponCode: validatedCouponCode,
       );
+      debugPrint('[Payment] Order created: orderId=${order.orderId} '
+          'amountPaise=${order.amountPaise} payable=${order.payableAmount} '
+          'discount=${order.discountAmount} '
+          'keyId=${order.keyId.isNotEmpty ? "present" : "MISSING"}');
       late final RazorpayCheckoutResult checkoutResult;
       try {
         checkoutResult = await _paymentService.openCheckout(order);

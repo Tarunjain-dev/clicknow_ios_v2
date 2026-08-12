@@ -71,6 +71,9 @@ class ClickNowNotification {
       case 'professional_accepted':
       case 'booking_started':
       case 'booking_completed':
+      case 'booking_reschedule_requested':
+      case 'booking_reschedule_approved':
+      case 'booking_reschedule_rejected':
         return 'Booking';
       case 'refund_approved':
       case 'refund_completed':

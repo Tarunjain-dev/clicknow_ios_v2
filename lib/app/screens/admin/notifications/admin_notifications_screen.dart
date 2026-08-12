@@ -23,30 +23,28 @@ class AdminNotificationsScreen extends StatelessWidget {
           scale: scale,
           activeRoute: AppRoutes.adminNotificationsRoute,
         ),
-        body: SafeArea(
-          child: Column(
-            children: <Widget>[
-              _header(scale),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    scale.getScaledWidth(14),
-                    scale.getScaledHeight(14),
-                    scale.getScaledWidth(14),
-                    scale.getScaledHeight(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _composeCard(context, scale, controller),
-                      SizedBox(height: scale.getScaledHeight(16)),
-                      _campaignHistory(scale, controller),
-                    ],
-                  ),
+        body: Column(
+          children: <Widget>[
+            _header(scale),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  scale.getScaledWidth(14),
+                  scale.getScaledHeight(14),
+                  scale.getScaledWidth(14),
+                  scale.getScaledHeight(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _composeCard(context, scale, controller),
+                    SizedBox(height: scale.getScaledHeight(16)),
+                    _campaignHistory(scale, controller),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -56,7 +54,7 @@ class AdminNotificationsScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
         scale.getScaledWidth(10),
-        scale.getScaledHeight(8),
+        scale.getScaledHeight(60),
         scale.getScaledWidth(12),
         scale.getScaledHeight(12),
       ),
@@ -111,7 +109,7 @@ class AdminNotificationsScreen extends StatelessWidget {
           SizedBox(height: scale.getScaledHeight(10)),
           Obx(
             () => DropdownButtonFormField<String>(
-              value: controller.recipientType.value,
+              initialValue: controller.recipientType.value,
               dropdownColor: Colors.white,
               decoration: _inputDecoration('Audience'),
               style: const TextStyle(color: Colors.black54),

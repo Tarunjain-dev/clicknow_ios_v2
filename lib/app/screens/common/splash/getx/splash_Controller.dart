@@ -5,6 +5,7 @@ import 'package:clicknow_version2/app/screens/professional/getx/professional_onb
 import 'package:clicknow_version2/app/services/rbac_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -17,59 +18,104 @@ class SplashController extends GetxController {
   Timer? _timer;
 
   @override
+  void onInit() {
+    super.onInit();
+    debugPrint('[SplashController] onInit');
+  }
+
+  @override
   void onReady() {
     super.onReady();
-    _timer = Timer(const Duration(seconds: 3), _navigateNext);
+    debugPrint('[SplashController] onReady — scheduling navigation');
+    // Skip the splash delay entirely when returning from iOS reCAPTCHA so the
+    // OTP screen appears immediately without the 3-second wait.
+    final delay = AuthController.hasPendingOtp
+        ? Duration.zero
+        : const Duration(seconds: 3);
+    _timer = Timer(delay, _navigateNext);
   }
 
   Future<void> _navigateNext() async {
+    debugPrint('[SplashController] _navigateNext start');
+
+    // If AuthController is already live and the OTP screen is visible, the
+    // user is mid-verification (e.g. returning from iOS reCAPTCHA). Do not
+    // navigate away — the OTP screen must remain visible.
+    if (Get.isRegistered<AuthController>()) {
+      final auth = Get.find<AuthController>();
+      if (auth.showOtp.value) {
+        debugPrint(
+          '[SplashController] OTP screen active — skipping navigation',
+        );
+        return;
+      }
+    }
+
     final hasSeenOnboarding = _storage.read('hasSeenOnboarding') ?? false;
     if (!hasSeenOnboarding) {
+      debugPrint('[SplashController] → onboarding (first launch)');
       Get.offAllNamed(AppRoutes.onBoardingRoute);
       return;
     }
 
     final user = _auth.currentUser;
-    if (user == null) {
-      final isGuestUser = _storage.read(AuthController.guestUserStorageKey) == true;
-      if (isGuestUser) {
-        Get.offAllNamed(AppRoutes.customerBottomNavigationRoute);
-        return;
+
+    // --- Authenticated user: route to their dashboard ---
+    if (user != null) {
+      debugPrint('[SplashController] user authenticated uid=${user.uid}');
+      _storage.write(AuthController.guestUserStorageKey, false);
+      try {
+        final useCached = RbacService.isLocalDecisionScopedToUid(
+          _storage,
+          uid: user.uid,
+        );
+        final decision = useCached
+            ? _cachedDecisionFallback()
+            : await RbacService.resolveByUid(
+                uid: user.uid,
+                fallbackPhone: user.phoneNumber,
+              );
+        await RbacService.persistLocalDecision(_storage, decision, uid: user.uid);
+        await _routeByDecision(decision);
+      } catch (_) {
+        final useScopedCache = RbacService.isLocalDecisionScopedToUid(
+          _storage,
+          uid: user.uid,
+        );
+        final fallback = useScopedCache
+            ? _cachedDecisionFallback()
+            : _safeFallbackForCurrentUser(user);
+        await RbacService.persistLocalDecision(_storage, fallback, uid: user.uid);
+        await _routeByDecision(fallback);
       }
+      return;
+    }
+
+    // --- No authenticated user ---
+
+    // If there is a pending OTP (e.g. returning from iOS reCAPTCHA), go to
+    // the login screen so AuthController can restore the OTP state.
+    if (AuthController.hasPendingOtp) {
+      debugPrint(
+        '[SplashController] → login (pending OTP — restoring after reCAPTCHA return)',
+      );
+      // Ensure AuthController is initialised so it can restore OTP state.
+      AuthController.instance;
       Get.offAllNamed(AppRoutes.loginRoute);
       return;
     }
 
-    _storage.write(AuthController.guestUserStorageKey, false);
-
-    try {
-      final useCached = RbacService.isLocalDecisionScopedToUid(
-        _storage,
-        uid: user.uid,
-      );
-      final decision = useCached
-          ? _cachedDecisionFallback()
-          : await RbacService.resolveByUid(
-              uid: user.uid,
-              fallbackPhone: user.phoneNumber,
-            );
-      RbacService.persistLocalDecision(_storage, decision);
-      await _routeByDecision(decision);
-    } catch (_) {
-      final useScopedCache = RbacService.isLocalDecisionScopedToUid(
-        _storage,
-        uid: user.uid,
-      );
-      final fallback = useScopedCache
-          ? _cachedDecisionFallback()
-          : _safeFallbackForCurrentUser(user);
-      await RbacService.persistLocalDecision(
-        _storage,
-        fallback,
-        uid: user.uid,
-      );
-      await _routeByDecision(fallback);
+    final isGuestUser =
+        _storage.read(AuthController.guestUserStorageKey) == true;
+    if (isGuestUser) {
+      debugPrint('[SplashController] → customer dashboard (guest mode)');
+      Get.offAllNamed(AppRoutes.customerBottomNavigationRoute);
+      return;
     }
+
+    debugPrint('[SplashController] → login (unauthenticated)');
+    AuthController.instance.resetLocalAuthState(keepGuestMode: false);
+    Get.offAllNamed(AppRoutes.loginRoute);
   }
 
   Future<void> _routeByDecision(RbacDecision decision) async {
@@ -119,8 +165,9 @@ class SplashController extends GetxController {
         (_storage.read(AuthController.rbacRoleStorageKey) as String?)
             ?.trim()
             .toLowerCase();
-    final cachedCompatibleRole =
-        (_storage.read('userRole') as String?)?.trim().toLowerCase();
+    final cachedCompatibleRole = (_storage.read('userRole') as String?)
+        ?.trim()
+        .toLowerCase();
 
     final role = () {
       if (cachedRbacRole == RbacDecision.roleAdmin ||
@@ -145,13 +192,15 @@ class SplashController extends GetxController {
         (_storage.read(AuthController.approvalStatusStorageKey) as String?)
             ?.trim()
             .toLowerCase();
-    final approval = cachedApprovalStatus == null || cachedApprovalStatus.isEmpty
+    final approval =
+        cachedApprovalStatus == null || cachedApprovalStatus.isEmpty
         ? (cachedCompatibleRole == 'professional_pending'
               ? 'pending'
               : 'approved')
         : cachedApprovalStatus;
 
-    final onboarded = cachedProfessionalOnboarded ||
+    final onboarded =
+        cachedProfessionalOnboarded ||
         effectiveRole == RbacDecision.roleProfessional;
     final hasProfile =
         _storage.read(AuthController.professionalProfileStorageKey) == true;
@@ -196,6 +245,7 @@ class SplashController extends GetxController {
 
   @override
   void onClose() {
+    debugPrint('[SplashController] onClose');
     _timer?.cancel();
     super.onClose();
   }

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:clicknow_version2/app/screens/professional/professionalDashboard/bookings/getx/professionalBookings_Controller.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
 import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
@@ -63,13 +62,13 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                           fontWeight: FontWeight.w700,
-                          fontSize: scale.getScaledFont(17),
+                          fontSize: scale.getScaledFont(16),
                         ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: scale.getScaledHeight(12)),
+                SizedBox(height: scale.getScaledHeight(8)),
                 _detailCard(
                   scale: scale,
                   isDark: isDark,
@@ -177,7 +176,7 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                           fontWeight: FontWeight.w600,
-                          fontSize: scale.getScaledFont(16),
+                          fontSize: scale.getScaledFont(14),
                         ),
                       ),
                       SizedBox(height: scale.getScaledHeight(4)),
@@ -201,6 +200,10 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                 ),
                 SizedBox(height: scale.getScaledHeight(12)),
                 _pricePreviewCard(scale, isDark),
+                if (bookingItem.reschedulePending) ...[
+                  SizedBox(height: scale.getScaledHeight(12)),
+                  _rescheduleInfoCard(scale, isDark, bookingItem),
+                ],
                 if (bookingItem.canEnd) ...[
                   SizedBox(height: scale.getScaledHeight(12)),
                   _timerCard(scale: scale, isDark: isDark, item: bookingItem),
@@ -222,8 +225,12 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                                 ? null
                                 : () => controller.acceptBooking(currentItem),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isDark ? Colors.white : AppColors.primaryColor,
-                              foregroundColor: isDark ? Color(0xFF4A176E) : Colors.white,
+                              backgroundColor: isDark
+                                  ? Colors.white
+                                  : AppColors.primaryColor,
+                              foregroundColor: isDark
+                                  ? Color(0xFF4A176E)
+                                  : Colors.white,
                               minimumSize: Size.fromHeight(
                                 scale.getScaledHeight(46),
                               ),
@@ -304,8 +311,14 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                             )
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF4A176E),
+                        backgroundColor: currentItem.canEnd
+                            ? Color.fromARGB(255, 202, 0, 24)
+                            : isDark
+                            ? Color(0xFFFCFBFF)
+                            : Color(0xff00A63E),
+                        foregroundColor: isDark
+                            ? const Color(0xFF4A176E)
+                            : Colors.white,
                         minimumSize: Size.fromHeight(scale.getScaledHeight(46)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -315,9 +328,11 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                           ? SizedBox(
                               width: scale.getScaledWidth(18),
                               height: scale.getScaledHeight(18),
-                              child: const CircularProgressIndicator(
+                              child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Color(0xFF4A176E),
+                                color: isDark
+                                    ? const Color(0xFF4A176E)
+                                    : Colors.white,
                               ),
                             )
                           : currentItem.canEnd
@@ -346,10 +361,8 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                                   ? 'Customer has not completed the remaining payment.'
                                   : 'View Only',
                               style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: scale.getScaledFont(
-                                  currentItem.awaitingFullPayment ? 13 : 18,
-                                ),
+                                fontWeight: FontWeight.bold,
+                                fontSize: scale.getScaledFont(12),
                               ),
                             ),
                     ),
@@ -405,20 +418,20 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
             title,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black,
-              fontSize: scale.getScaledFont(14),
+              fontSize: scale.getScaledFont(12),
               fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: scale.getScaledHeight(2)),
           Text(
-            value.trim() == "" ? "-" : value,
+            value.trim() == "" ? "----" : value,
             maxLines: valueMaxLines,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.7)
                   : Colors.black.withValues(alpha: 0.7),
-              fontSize: scale.getScaledFont(15),
+              fontSize: scale.getScaledFont(12),
               height: 1.3,
             ),
           ),
@@ -431,26 +444,21 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: scale.getScaledHeight(2)),
       child: Text(
-        '- $text',
+        '☉ $text',
         style: TextStyle(
           color: isDark
               ? Colors.white.withValues(alpha: 0.75)
               : Colors.black.withValues(alpha: 0.75),
-          fontSize: scale.getScaledFont(15),
+          fontSize: scale.getScaledFont(12),
         ),
       ),
     );
   }
 
   Widget _pricePreviewCard(ScalingUtility scale, bool isDark) {
-    final commissionAmount = bookingItem.commissionAmount > 0
-        ? bookingItem.commissionAmount
-        : 0;
     final payoutAmount = bookingItem.professionalPayoutAmount > 0
         ? bookingItem.professionalPayoutAmount
         : bookingItem.totalPayable;
-    final bookingAmount =
-        payoutAmount + bookingItem.gstAmount + commissionAmount;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -482,13 +490,13 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w600,
-                    fontSize: scale.getScaledFont(16),
+                    fontSize: scale.getScaledFont(14),
                   ),
                 ),
                 const Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale.getScaledWidth(10),
+                    horizontal: scale.getScaledWidth(8),
                     vertical: scale.getScaledHeight(3),
                   ),
                   decoration: BoxDecoration(
@@ -504,7 +512,7 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                     bookingItem.paymentStatusLabel,
                     style: TextStyle(
                       color: isDark ? Color(0xff12D86D) : Color(0xff00A63E),
-                      fontSize: scale.getScaledFont(12),
+                      fontSize: scale.getScaledFont(10),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -527,7 +535,7 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w600,
-                    fontSize: scale.getScaledFont(16),
+                    fontSize: scale.getScaledFont(12),
                   ),
                 ),
                 SizedBox(height: scale.getScaledHeight(1)),
@@ -537,49 +545,49 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.65)
                         : Colors.black.withValues(alpha: 0.65),
-                    fontSize: scale.getScaledFont(13),
+                    fontSize: scale.getScaledFont(12),
                   ),
                 ),
-                SizedBox(height: scale.getScaledHeight(10)),
+                SizedBox(height: scale.getScaledHeight(8)),
+                // _priceLine(
+                //   scale,
+                //   'Booking value',
+                //   'Rs.${_formatAmount(bookingAmount)}',
+                //   isDark,
+                // ),
+                // _priceLine(
+                //   scale,
+                //   'GST deduction',
+                //   '- Rs.${_formatAmount(bookingItem.gstAmount)}',
+                //   isDark,
+                // ),
+                // _priceLine(
+                //   scale,
+                //   'Platform Commission (21%)',
+                //   '- Rs.${_formatAmount(commissionAmount)}',
+                //   isDark,
+                // ),
+                // Container(
+                //   margin: EdgeInsets.only(top: scale.getScaledHeight(2)),
+                //   height: 1,
+                //   color: Colors.white.withValues(alpha: 0.15),
+                // ),
                 _priceLine(
                   scale,
-                  'Booking value',
-                  'Rs.${_formatAmount(bookingAmount)}',
-                  isDark,
-                ),
-                _priceLine(
-                  scale,
-                  'GST deduction',
-                  '- Rs.${_formatAmount(bookingItem.gstAmount)}',
-                  isDark,
-                ),
-                _priceLine(
-                  scale,
-                  'Platform Commission (21%)',
-                  '- Rs.${_formatAmount(commissionAmount)}',
-                  isDark,
-                ),
-                Container(
-                  margin: EdgeInsets.only(top: scale.getScaledHeight(2)),
-                  height: 1,
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
-                _priceLine(
-                  scale,
-                  'Expected Payout',
+                  'Expected Payout for ${bookingItem.durationHours} hours',
                   'Rs.${_formatAmount(payoutAmount)}',
                   isDark,
                   isBold: true,
                 ),
-                Text(
-                  'Payout = Booking value - GST - 21% commission',
-                  style: TextStyle(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.55)
-                        : Colors.black.withValues(alpha: 0.55),
-                    fontSize: scale.getScaledFont(11),
-                  ),
-                ),
+                // Text(
+                //   'Payout = Booking value - GST - 21% commission',
+                //   style: TextStyle(
+                //     color: isDark
+                //         ? Colors.white.withValues(alpha: 0.55)
+                //         : Colors.black.withValues(alpha: 0.55),
+                //     fontSize: scale.getScaledFont(11),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -606,7 +614,7 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                   ? Colors.white.withValues(alpha: isBold ? 0.94 : 0.72)
                   : Colors.black.withValues(alpha: isBold ? 0.94 : 0.72),
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-              fontSize: scale.getScaledFont(14),
+              fontSize: scale.getScaledFont(12),
             ),
           ),
           const Spacer(),
@@ -617,7 +625,62 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
                   ? Colors.white.withValues(alpha: isBold ? 0.94 : 0.72)
                   : Colors.black.withValues(alpha: isBold ? 0.94 : 0.72),
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              fontSize: scale.getScaledFont(12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rescheduleInfoCard(
+    ScalingUtility scale,
+    bool isDark,
+    ProfessionalBookingItem item,
+  ) {
+    return _detailCard(
+      scale: scale,
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Customer Requested Reschedule',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontWeight: FontWeight.w800,
               fontSize: scale.getScaledFont(14),
+            ),
+          ),
+          SizedBox(height: scale.getScaledHeight(8)),
+          _valueBlock(
+            scale: scale,
+            isDark: isDark,
+            title: 'Current Schedule',
+            value: item.dateAndTime,
+          ),
+          _valueBlock(
+            scale: scale,
+            isDark: isDark,
+            title: 'Requested Schedule',
+            value: item.rescheduleRequestedSchedule,
+          ),
+          if (item.rescheduleReason.isNotEmpty)
+            _valueBlock(
+              scale: scale,
+              isDark: isDark,
+              title: 'Reason',
+              value: item.rescheduleReason,
+              valueMaxLines: 4,
+            ),
+          Text(
+            'Admin review is pending. Continue using the current schedule until approval.',
+            style: TextStyle(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.72)
+                  : Colors.black.withValues(alpha: 0.62),
+              fontSize: scale.getScaledFont(12),
+              height: 1.35,
             ),
           ),
         ],
@@ -786,7 +849,16 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, otpController.text.trim()),
-            child: const Text('Start Booking'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff00A63E),
+            ),
+            child: const Text(
+              'Start Booking',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -823,7 +895,16 @@ class ProfessionalBookingDetailsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('End Booking'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 202, 1, 1),
+            ),
+            child: const Text(
+              'End Booking',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),

@@ -46,59 +46,57 @@ class _ProfessionalReviewDetailsScreenState extends State<ProfessionalReviewDeta
       color: Colors.white,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance.collection('professional_profiles').doc(widget.professionalId).snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final doc = snapshot.data;
-              if (doc == null || !doc.exists) {
-                return const Center(
-                  child: Text('Professional not found', style: TextStyle(color: Colors.black),),
-                );
-              }
-
-              final profile = AdminProfessionalProfile.fromDocument(doc);
-              final statusStyle = _statusStyle(profile.accountStatus);
-
-              return Column(
-                children: [
-                  _topHeader(profile, statusStyle),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: ResponsiveUtility.only(left: 12, top: 12, right: 12, bottom: 16),
-                      child: Column(
-                        children: [
-                          _basicVerificationCard(profile, statusStyle),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _personalDetailsCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _professionalProfileCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _legalCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _servicesCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _questionsCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _financialCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _reviewDecisionCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _summaryCard(profile),
-                          SizedBox(height: ResponsiveUtility.height(10)),
-                          _adminActionsCard(profile),
-                        ],
-                      ),
+        body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance.collection('professional_profiles').doc(widget.professionalId).snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+        
+            final doc = snapshot.data;
+            if (doc == null || !doc.exists) {
+              return const Center(
+                child: Text('Professional not found', style: TextStyle(color: Colors.black),),
+              );
+            }
+        
+            final profile = AdminProfessionalProfile.fromDocument(doc);
+            final statusStyle = _statusStyle(profile.accountStatus);
+        
+            return Column(
+              children: [
+                _topHeader(profile, statusStyle),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: ResponsiveUtility.only(left: 12, top: 12, right: 12, bottom: 16),
+                    child: Column(
+                      children: [
+                        _basicVerificationCard(profile, statusStyle),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _personalDetailsCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _professionalProfileCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _legalCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _servicesCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _questionsCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _financialCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _reviewDecisionCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _summaryCard(profile),
+                        SizedBox(height: ResponsiveUtility.height(10)),
+                        _adminActionsCard(profile),
+                      ],
                     ),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -106,7 +104,7 @@ class _ProfessionalReviewDetailsScreenState extends State<ProfessionalReviewDeta
 
   Widget _topHeader(AdminProfessionalProfile profile, _LabelStyle statusStyle) {
     return Container(
-      padding: ResponsiveUtility.only(left: 10, top: 8, bottom: 10, right: 10),
+      padding: ResponsiveUtility.only(left: 10, top: 60, bottom: 10, right: 10),
       decoration: const BoxDecoration(
         color: Color(0xff6F18A8),
         border: Border(bottom: BorderSide(color: Color(0xffD9D9D9), width: 1)),

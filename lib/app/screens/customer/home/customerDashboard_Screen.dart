@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:clicknow_version2/app/screens/customer/getx/customer_booking_controller.dart';
 import 'package:clicknow_version2/app/screens/customer/getx/customer_bookings_tab_controller.dart';
 import 'package:clicknow_version2/app/screens/common/auth/getx/authController.dart';
-import 'package:clicknow_version2/app/screens/customer/home/customer_booking_status_screen.dart';
-import 'package:clicknow_version2/app/screens/customer/home/customer_bookings_screen.dart';
+import 'package:clicknow_version2/app/screens/customer/home/customer_booking_details_screen.dart';
+import 'package:clicknow_version2/app/screens/customer/home/customer_checkout_screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/customer_notifications_screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/services/anchor/professionalAnchorServices_Screen.dart';
 import 'package:clicknow_version2/app/screens/customer/home/services/dj/professionalDjService_Screen.dart';
@@ -30,13 +30,12 @@ class CustomerDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     /// -- Scaling Utility instance
     final scale = ScalingUtility(context: context)..setCurrentDeviceSize();
 
     /// -- Customer dashboard controller instance
-    final controller = Get.isRegistered<CustomerDashboardController>()
-        ? Get.find<CustomerDashboardController>()
-        : Get.put(CustomerDashboardController());
+    final controller = Get.isRegistered<CustomerDashboardController>() ? Get.find<CustomerDashboardController>() : Get.put(CustomerDashboardController());
     controller.ensureActiveBookingsListener();
 
     /// -- Dark mode instance

@@ -43,6 +43,11 @@ class AdminBookingRequest {
     required this.isCanceled,
     required this.rejectionReason,
     required this.rescheduleRequested,
+    required this.rescheduleRequestId,
+    required this.rescheduleNewEventDate,
+    required this.rescheduleNewEventTime,
+    required this.rescheduleReason,
+    required this.rescheduleRequestedAt,
     required this.professionalDecisionStatus,
     required this.rejectedProfessionalId,
     required this.rejectedProfessionalIds,
@@ -93,6 +98,11 @@ class AdminBookingRequest {
   final bool isCanceled;
   final String rejectionReason;
   final bool rescheduleRequested;
+  final String rescheduleRequestId;
+  final DateTime? rescheduleNewEventDate;
+  final String rescheduleNewEventTime;
+  final String rescheduleReason;
+  final DateTime? rescheduleRequestedAt;
   final String professionalDecisionStatus;
   final String rejectedProfessionalId;
   final List<String> rejectedProfessionalIds;
@@ -105,6 +115,7 @@ class AdminBookingRequest {
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data();
+    final rescheduleRequest = _asMap(data['rescheduleRequest']);
     return AdminBookingRequest(
       id: doc.id,
       requestId: (data['requestId'] as String? ?? doc.id).trim(),
@@ -174,6 +185,11 @@ class AdminBookingRequest {
       isCanceled: (data['isCanceled'] as bool?) ?? false,
       rejectionReason: (data['rejectionReason'] as String? ?? '').trim(),
       rescheduleRequested: _hasPendingReschedule(data),
+      rescheduleRequestId: _string(rescheduleRequest['requestId']),
+      rescheduleNewEventDate: _asDateTime(rescheduleRequest['newEventDate']),
+      rescheduleNewEventTime: _string(rescheduleRequest['newEventTime']),
+      rescheduleReason: _string(rescheduleRequest['reason']),
+      rescheduleRequestedAt: _asDateTime(rescheduleRequest['requestedAt']),
       professionalDecisionStatus:
           (data['professionalDecisionStatus'] as String? ?? '').trim(),
       rejectedProfessionalId:
@@ -222,6 +238,9 @@ class AdminBookingRequest {
       bookingStage,
       assignedProfessionalId,
       rejectionReason,
+      rescheduleRequestId,
+      rescheduleReason,
+      rescheduleNewEventTime,
     ].join(' ').toLowerCase();
   }
 
@@ -407,6 +426,8 @@ int _asInt(dynamic value, {int fallback = 0}) {
   if (value is String) return int.tryParse(value.trim()) ?? fallback;
   return fallback;
 }
+
+String _string(dynamic value) => value?.toString().trim() ?? '';
 
 DateTime? _asDateTime(dynamic value) {
   if (value is Timestamp) {
