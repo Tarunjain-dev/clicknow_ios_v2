@@ -16,6 +16,7 @@ import 'package:clicknow_version2/app/services/service_catalog_paths.dart';
 import 'package:clicknow_version2/app/screens/customer/profile/getx/customer_profile_controller.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appColors.dart';
 import 'package:clicknow_version2/app/utils/device_constants/appImages.dart';
+import 'package:clicknow_version2/app/utils/device_utils/app_snackbar.dart';
 import 'package:clicknow_version2/app/utils/device_utils/helperFunctions.dart';
 import 'package:clicknow_version2/app/utils/device_utils/responsive_Utility.dart';
 import 'package:clicknow_version2/app/utils/device_utils/scale_utility.dart';
@@ -317,8 +318,15 @@ class CustomerDashboardScreen extends StatelessWidget {
                             top: Radius.circular(10),
                           ),
                           child: Image.asset(
-                            service.imagePath,
+                            _serviceCardImagePath(service),
                             fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.asset(
+                                AppImages.banner1,
+                                fit: BoxFit.cover,
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -345,15 +353,13 @@ class CustomerDashboardScreen extends StatelessWidget {
                                 size: scale.getScaledWidth(10),
                               ),
                               SizedBox(width: scale.getScaledWidth(2)),
-                              Obx(
-                                () => Text(
-                                  controller.ratingForService(
-                                    service.catalogServiceId,
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: scale.getScaledFont(10),
-                                  ),
+                              Text(
+                                controller.ratingForService(
+                                  service.catalogServiceId,
+                                ),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: scale.getScaledFont(10),
                                 ),
                               ),
                             ],
@@ -371,6 +377,14 @@ class CustomerDashboardScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Obx(
+                          () => controller.isServiceActive(service.id)
+                              ? const SizedBox.shrink()
+                              : Align(
+                                  alignment: Alignment.topLeft,
+                                  child: _inactiveBadge(compact: true),
+                                ),
+                        ),
                         Text(
                           service.title,
                           maxLines: 2,
@@ -400,6 +414,12 @@ class CustomerDashboardScreen extends StatelessWidget {
                               child: Obx(() {
                                 final lowestPrice = controller
                                     .getLowestPriceForService(service.id);
+                                final isActive = controller.isServiceActive(
+                                  service.id,
+                                );
+                                final priceLabel = isActive && lowestPrice > 0
+                                    ? 'Rs.${controller.formatAmount(lowestPrice)}'
+                                    : 'Inactive';
                                 return Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +441,7 @@ class CustomerDashboardScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      'Rs.${controller.formatAmount(lowestPrice)}',
+                                      priceLabel,
                                       style: TextStyle(
                                         color: isDark
                                             ? Colors.white
@@ -455,6 +475,15 @@ class CustomerDashboardScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _serviceCardImagePath(DashboardService service) {
+    // The photography card uses the same asset that already renders in the
+    // dashboard banner, avoiding a blank image on Android builds.
+    if (service.id == 'photo') {
+      return AppImages.photographer;
+    }
+    return service.imagePath;
   }
 
   Widget _activeBookingCard(
@@ -644,6 +673,27 @@ class CustomerDashboardScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _inactiveBadge({bool compact = false}) {
+    return Container(
+      padding: ResponsiveUtility.symmetric(
+        horizontal: compact ? 5 : 8,
+        vertical: compact ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(compact ? 6 : 8),
+      ),
+      child: Text(
+        'Inactive',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: ResponsiveUtility.fontSize(compact ? 8 : 11),
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -864,6 +914,7 @@ class CustomerDashboardController extends GetxController {
   final RxInt notificationCount = 0.obs;
   final RxInt currentBannerIndex = 0.obs;
   final RxMap<String, int> lowestServicePriceMap = <String, int>{}.obs;
+  final RxMap<String, bool> serviceActiveMap = <String, bool>{}.obs;
   final RxMap<String, double> serviceRatingMap = <String, double>{}.obs;
   final RxBool isActiveBookingsLoading = true.obs;
   final RxList<DashboardBooking> activeBookings = <DashboardBooking>[].obs;
@@ -876,6 +927,9 @@ class CustomerDashboardController extends GetxController {
       <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
   final List<StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
   _serviceStatsSubscriptions =
+      <StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>[];
+  final List<StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+  _serviceAvailabilitySubscriptions =
       <StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>[];
   Worker? _cartCountWorker;
   final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
@@ -899,7 +953,9 @@ class CustomerDashboardController extends GetxController {
     });
     for (final service in services) {
       lowestServicePriceMap[service.id] = 0;
+      serviceActiveMap[service.id] = false;
     }
+    _listenServiceAvailability();
     _listenServiceLowestPrices();
     _listenServiceStats();
     _bindActiveBookings();
@@ -1012,6 +1068,27 @@ class CustomerDashboardController extends GetxController {
     }
   }
 
+  void _listenServiceAvailability() {
+    for (final service in services) {
+      serviceActiveMap[service.id] = false;
+      final subscription = _db
+          .collection(ServiceCatalogPaths.servicesCollection)
+          .doc(service.catalogServiceId)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              final data = snapshot.data();
+              serviceActiveMap[service.id] =
+                  snapshot.exists && _asInt(data?['activeEventTypeCount']) > 0;
+            },
+            onError: (_) {
+              serviceActiveMap[service.id] = false;
+            },
+          );
+      _serviceAvailabilitySubscriptions.add(subscription);
+    }
+  }
+
   void _listenServiceStats() {
     for (final service in services) {
       serviceRatingMap[service.catalogServiceId] = 0;
@@ -1109,6 +1186,10 @@ class CustomerDashboardController extends GetxController {
 
   int getLowestPriceForService(String serviceId) {
     return lowestServicePriceMap[serviceId] ?? 0;
+  }
+
+  bool isServiceActive(String serviceId) {
+    return serviceActiveMap[serviceId] ?? false;
   }
 
   String formatAmount(int value) {
@@ -1324,6 +1405,13 @@ class CustomerDashboardController extends GetxController {
   }
 
   void onServiceTap(String serviceId) {
+    if (!isServiceActive(serviceId)) {
+      AppSnackbar.info(
+        'Service Inactive',
+        'This service is not available for booking right now.',
+      );
+      return;
+    }
     switch (serviceId) {
       case 'photo':
         Get.to(() => const PhotoAndVideographyScreen());
@@ -1373,6 +1461,9 @@ class CustomerDashboardController extends GetxController {
       subscription.cancel();
     }
     for (final subscription in _serviceStatsSubscriptions) {
+      subscription.cancel();
+    }
+    for (final subscription in _serviceAvailabilitySubscriptions) {
       subscription.cancel();
     }
     super.onClose();
