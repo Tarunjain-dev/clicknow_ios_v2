@@ -482,34 +482,17 @@ class AdminServicesController extends GetxController {
         final serviceRef = _db
             .collection(ServiceCatalogPaths.servicesCollection)
             .doc(seed.id);
-        final activeNames = seed.events
-            .where((event) => event.isActive)
-            .map((event) => event.name)
-            .toList(growable: false);
-
         batch.set(serviceRef, {
           'name': seed.name,
           'isActive': true,
           'sortOrder': seed.sortOrder,
-          'eventTypeCount': seed.events.length,
-          'activeEventTypeCount': activeNames.length,
-          'activeEventTypeNames': activeNames,
+          'eventTypeCount': 0,
+          'activeEventTypeCount': 0,
+          'activeEventTypeNames': const <String>[],
           'updatedAt': now,
           'createdAt': now,
         }, SetOptions(merge: true));
 
-        for (final event in seed.events) {
-          final eventRef = serviceRef
-              .collection(ServiceCatalogPaths.eventTypesSubcollection)
-              .doc();
-          batch.set(eventRef, {
-            'name': event.name,
-            'isActive': event.isActive,
-            'pricingPlans': _defaultPricingPlans(),
-            'updatedAt': now,
-            'createdAt': now,
-          }, SetOptions(merge: true));
-        }
       }
 
       batch.set(settingsRef, {

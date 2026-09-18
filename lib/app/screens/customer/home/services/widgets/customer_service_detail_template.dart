@@ -44,7 +44,6 @@ class CustomerServiceDetailScreen extends StatefulWidget {
 
 class _CustomerServiceDetailScreenState
     extends State<CustomerServiceDetailScreen> {
-  static const double _fixedGstPercent = 18.0;
   static const double _defaultIndiaLatitude = 22.9734;
   static const double _defaultIndiaLongitude = 78.6569;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -81,6 +80,7 @@ class _CustomerServiceDetailScreenState
   DateTime? _selectedEventDate;
   TimeOfDay? _selectedEventTime;
   double _gstPercent = 18.0;
+  bool _isServiceActive = false;
   bool _isCatalogLoading = true;
   bool _isAddingToCart = false;
   bool _isEventDetailsExpanded = true;
@@ -101,14 +101,18 @@ class _CustomerServiceDetailScreenState
   Timer? _placeSearchDebounceTimer;
   int _placeSearchRequestId = 0;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _gstSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _serviceSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _selectedPlanIndex = 0;
-    _selectedFallbackEventType =
-        widget.config.eventTypes[widget.config.initialSelectedEventTypeIndex];
+    _selectedFallbackEventType = widget.config.eventTypes.isEmpty
+        ? ''
+        : widget.config.eventTypes[widget.config.initialSelectedEventTypeIndex
+              .clamp(0, widget.config.eventTypes.length - 1)
+              .toInt()];
     _requirementsController.addListener(() {
       if (!mounted) {
         return;
@@ -201,9 +205,31 @@ class _CustomerServiceDetailScreenState
           });
         });
 
-    _eventSub = _db
+    final serviceRef = _db
         .collection(ServiceCatalogPaths.servicesCollection)
-        .doc(widget.config.catalogServiceId)
+        .doc(widget.config.catalogServiceId);
+
+    _serviceSub = serviceRef.snapshots().listen(
+      (snapshot) {
+        if (!mounted) return;
+        final data = snapshot.data();
+        setState(() {
+          _isServiceActive =
+              snapshot.exists &&
+              _asInt(data?['activeEventTypeCount'], fallback: 0) > 0;
+          _syncSelectedEventAfterCatalogChange();
+        });
+      },
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _isServiceActive = false;
+          _syncSelectedEventAfterCatalogChange();
+        });
+      },
+    );
+
+    _eventSub = serviceRef
         .collection(ServiceCatalogPaths.eventTypesSubcollection)
         .where('isActive', isEqualTo: true)
         .snapshots()
@@ -236,7 +262,10 @@ class _CustomerServiceDetailScreenState
   }
 
   void _syncSelectedEventAfterCatalogChange() {
-    if (_catalogEvents.isEmpty) {
+    if (!_isServiceActive || _catalogEvents.isEmpty) {
+      _selectedEventTypeId = null;
+      _selectedFallbackEventType = '';
+      _selectedPlanIndex = 0;
       return;
     }
     if (_selectedEventTypeId != null &&
@@ -277,15 +306,13 @@ class _CustomerServiceDetailScreenState
   }
 
   String get _selectedEventTypeName {
-    return _selectedCatalogEvent?.name ?? _selectedFallbackEventType;
+    return _selectedCatalogEvent?.name ?? '';
   }
 
   List<ServicePricingPlan> _effectivePricingPlans() {
     final fallbackPlans = widget.config.pricingPlans;
-    if (_selectedCatalogEvent == null) {
-      return fallbackPlans
-          .where((plan) => _amountFromText(plan.totalAmount) > 0)
-          .toList(growable: false);
+    if (!_isServiceActive || _selectedCatalogEvent == null) {
+      return const <ServicePricingPlan>[];
     }
 
     final catalogPlans = _selectedCatalogEvent!.orderedPlans;
@@ -358,6 +385,7 @@ class _CustomerServiceDetailScreenState
   @override
   void dispose() {
     _gstSub?.cancel();
+    _serviceSub?.cancel();
     _eventSub?.cancel();
     _placeSearchDebounceTimer?.cancel();
     _eventDateController.dispose();
@@ -387,24 +415,47 @@ class _CustomerServiceDetailScreenState
 
     final pricingPlans = _effectivePricingPlans();
 
-    if (pricingPlans.isEmpty) {
+    if (_isCatalogLoading) {
       return Scaffold(
         backgroundColor: isDark ? Colors.black : Colors.white,
         body: Center(
-          child: Text(
-            'Pricing unavailable for this service right now.',
-            style: TextStyle(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.85)
-                  : Colors.black.withValues(alpha: 0.85),
-              fontSize: ResponsiveUtility.fontSize(14),
+          child: CircularProgressIndicator(
+            color: isDark ? Colors.white : const Color(0xFF561C87),
+          ),
+        ),
+      );
+    }
+
+    if (!_isServiceActive || _catalogEvents.isEmpty || pricingPlans.isEmpty) {
+      return Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        appBar: AppBar(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+          elevation: 0,
+          foregroundColor: isDark ? Colors.white : Colors.black,
+        ),
+        body: Center(
+          child: Padding(
+            padding: ResponsiveUtility.symmetric(horizontal: 24),
+            child: Text(
+              'This service is inactive right now.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : Colors.black.withValues(alpha: 0.85),
+                fontSize: ResponsiveUtility.fontSize(14),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
       );
     }
 
-    final safePlanIndex = _selectedPlanIndex.clamp(0, pricingPlans.length - 1);
+    final safePlanIndex = _selectedPlanIndex
+        .clamp(0, pricingPlans.length - 1)
+        .toInt();
     final selectedPlan = pricingPlans[safePlanIndex];
     final selectedEventName = _selectedEventTypeName;
     final calculatedPrice = _calculatePrice(selectedPlan);
@@ -1123,7 +1174,7 @@ class _CustomerServiceDetailScreenState
                 ],
                 _priceRow(
                   scale,
-                  'GST (${_formatPercent(_fixedGstPercent)}%)',
+                  'GST (${_formatPercent(_gstPercent)}%)',
                   'Rs.${_formatAmount(calculatedPrice.gstAmount)}',
                   isDark: isDark,
                 ),
@@ -1348,7 +1399,7 @@ class _CustomerServiceDetailScreenState
         ? int.tryParse(_durationController.text.trim()) ?? 0
         : 1;
     final subtotal = ratePerHour * durationHours;
-    final gstAmount = ((subtotal * _fixedGstPercent) / 100).round();
+    final gstAmount = ((_gstPercent * subtotal) / 100).round();
     final totalAmount = subtotal + gstAmount;
     return _ServiceCalculatedPrice(
       ratePerHour: ratePerHour,
@@ -1966,6 +2017,17 @@ class _CustomerServiceDetailScreenState
   }
 
   Future<void> _showEventTypePicker() async {
+    if (_isCatalogLoading) {
+      AppSnackbar.info('Please Wait', 'Loading active event types.');
+      return;
+    }
+    if (!_isServiceActive) {
+      AppSnackbar.error(
+        'Service Inactive',
+        'This service is not available for booking right now.',
+      );
+      return;
+    }
     if (_catalogEvents.isNotEmpty) {
       final selectedName = await SearchableSelectionBottomSheet.show(
         context: context,
@@ -1991,21 +2053,10 @@ class _CustomerServiceDetailScreenState
       return;
     }
 
-    final selectedName = await SearchableSelectionBottomSheet.show(
-      context: context,
-      title: 'Select Speciality & Event type',
-      options: widget.config.eventTypes,
-      initialValue: _selectedEventTypeName,
-      searchHint: 'Search event type',
+    AppSnackbar.error(
+      'Service Inactive',
+      'No active event types are available for this service.',
     );
-
-    if (selectedName == null) {
-      return;
-    }
-    setState(() {
-      _selectedFallbackEventType = selectedName;
-      _selectedPlanIndex = 0;
-    });
   }
 
   Future<void> _handleAddToCart() async {
@@ -2196,7 +2247,7 @@ class _CustomerServiceDetailScreenState
       planKey: selectedPlan.key,
       planName: selectedPlan.name,
       basePrice: calculatedPrice.subtotal,
-      gstPercent: _fixedGstPercent,
+      gstPercent: _gstPercent,
       gstAmount: calculatedPrice.gstAmount,
       totalAmount: calculatedPrice.totalAmount,
       eventDate: _selectedEventDate,
@@ -2802,10 +2853,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 26,550',
       baseBreakdown: 'Base : Rs.22,500 + GST 18% : Rs.4,050',
       features: [
-        '4 hrs coverage.',
-        '200 edited photos',
-        'Online gallery',
-        'Basic album',
+        // '4 hrs coverage.',
+        // '200 edited photos',
+        // 'Online gallery',
+        // 'Basic album',
       ],
       headerColor: Color(0xFF0F5E35),
       accentColor: Color(0xFF00E980),
@@ -2817,10 +2868,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 44, 250',
       baseBreakdown: 'Base : Rs.37,500 + GST 18% : Rs.6,750',
       features: [
-        '8 hrs coverage.',
-        '500 edited photos',
-        '4k video highlight & premium album',
-        'Drone shorts',
+        // '8 hrs coverage.',
+        // '500 edited photos',
+        // '4k video highlight & premium album',
+        // 'Drone shorts',
       ],
       headerColor: Color(0xFF123572),
       accentColor: Color(0xFF0E8CFF),
@@ -2832,10 +2883,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 79,650',
       baseBreakdown: 'Base : Rs.67,500 + GST 18% : Rs.12,150',
       features: [
-        'Full day coverage',
-        '1000+ edited photos',
-        'Cinematic film',
-        'Drone shorts & Instagram Reels',
+        // 'Full day coverage',
+        // '1000+ edited photos',
+        // 'Cinematic film',
+        // 'Drone shorts & Instagram Reels',
       ],
       headerColor: Color(0xFF5A0F6B),
       accentColor: Color(0xFFD000FF),
@@ -2850,10 +2901,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 26,550',
       baseBreakdown: 'Base : Rs.22,500 + GST 18% : Rs.4,050',
       features: [
-        'Solo artist',
-        '2hrs performance',
-        'Basic sound setup',
-        '10-song set',
+        // 'Solo artist',
+        // '2hrs performance',
+        // 'Basic sound setup',
+        // '10-song set',
       ],
       headerColor: Color(0xFF0F5E35),
       accentColor: Color(0xFF00E980),
@@ -2865,10 +2916,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 44, 250',
       baseBreakdown: 'Base : Rs.37,500 + GST 18% : Rs.6,750',
       features: [
-        'Duo/Trio Band',
-        '3hrs performance',
-        'Full PA System',
-        'Custom playlist',
+        // 'Duo/Trio Band',
+        // '3hrs performance',
+        // 'Full PA System',
+        // 'Custom playlist',
       ],
       headerColor: Color(0xFF123572),
       accentColor: Color(0xFF0E8CFF),
@@ -2880,10 +2931,10 @@ class CustomerServiceDetailConfigs {
       totalAmount: 'Rs. 79,650',
       baseBreakdown: 'Base : Rs.67,500 + GST 18% : Rs.12,150',
       features: [
-        'Full band 5+',
-        '5Hrs Performance',
-        'Concert PA',
-        'Live Mixing & Stage lighting',
+        // 'Full band 5+',
+        // '5Hrs Performance',
+        // 'Concert PA',
+        // 'Live Mixing & Stage lighting',
       ],
       headerColor: Color(0xFF5A0F6B),
       accentColor: Color(0xFFD000FF),

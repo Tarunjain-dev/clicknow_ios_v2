@@ -1,0 +1,83 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter pub get --no-example
+
+## exception
+
+FileSystemException: FileSystemException: readInto failed, path = '/Users/kishoresahu/Documents/royal_it_mobile_projects/clicknow_version2/.flutter-plugins-dependencies' (OS Error: Operation timed out, errno = 60)
+
+```
+#0      _RandomAccessFile.readIntoSync (dart:io/file_impl.dart:930:7)
+#1      _File.readAsBytesSync (dart:io/file_impl.dart:679:35)
+#2      _File.readAsStringSync (dart:io/file_impl.dart:715:18)
+#3      ForwardingFile.readAsStringSync (package:file/src/forwarding/forwarding_file.dart:99:16)
+#4      ErrorHandlingFile.readAsStringSync.<anonymous closure> (package:flutter_tools/src/base/error_handling_io.dart:259:22)
+#5      _runSync (package:flutter_tools/src/base/error_handling_io.dart:1118:16)
+#6      ErrorHandlingFile.readAsStringSync (package:flutter_tools/src/base/error_handling_io.dart:258:12)
+#7      _readFileContent (package:flutter_tools/src/flutter_plugins.dart:468:35)
+#8      _detectFlutterPluginsListChanges (package:flutter_tools/src/flutter_plugins.dart:358:47)
+#9      _writeFlutterPluginsList (package:flutter_tools/src/flutter_plugins.dart:334:57)
+#10     refreshPluginsList (package:flutter_tools/src/flutter_plugins.dart:1326:24)
+<asynchronous suspension>
+#11     FlutterProject.ensureReadyForPlatformSpecificTooling (package:flutter_tools/src/project.dart:445:5)
+<asynchronous suspension>
+#12     PackagesGetCommand.runCommand.<anonymous closure> (package:flutter_tools/src/commands/packages.dart:409:11)
+<asynchronous suspension>
+#13     Pool.forEach.run (package:pool/pool.dart:183:19)
+<asynchronous suspension>
+#14     Pool.withResource (package:pool/pool.dart:127:14)
+<asynchronous suspension>
+#15     Future.wait.<anonymous closure> (dart:async/future.dart:567:21)
+<asynchronous suspension>
+#16     Pool.forEach.onListen.<anonymous closure> (package:pool/pool.dart:203:23)
+<asynchronous suspension>
+#17     _StreamController.close (dart:async/stream_controller.dart:640:3)
+<asynchronous suspension>
+#18     _nullDataHandler (dart:async/stream_impl.dart:549:1)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[✓] Flutter (Channel stable, 3.47.1, on macOS 26.3.1 25D771280a darwin-arm64, locale en-IN) [3.0s]
+    • Flutter version 3.47.1 on channel stable at /Users/kishoresahu/Development/flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision 6655482ec0 (4 weeks ago), 2026-08-19 10:07:23 -0700
+    • Engine revision 5d53178869
+    • Dart version 3.13.1
+    • DevTools version 2.60.0
+    • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets, enable-record-use, no-enable-swift-package-manager, omit-legacy-version-file, enable-lldb-debugging, enable-uiscene-migration
+
+[!] Android toolchain - develop for Android devices (Android SDK version 36.1.0) [3.9s]
+    • Android SDK at /Users/kishoresahu/Library/Android/sdk
+    • Emulator version 36.6.11.0 (build_id 15507667) (CL:N/A)
+    • Platform android-36.1, build-tools 36.1.0
+    • Java binary at: /usr/bin/java
+      This JDK was found in the system PATH.
+      To manually set the JDK path, use: `flutter config --jdk-dir="path/to/jdk"`.
+    ✗ Could not determine java version
+
+[✓] Xcode - develop for iOS and macOS (Xcode 26.6) [4.8s]
+    • Xcode at /Applications/Xcode.app/Contents/Developer
+    • Build 17F113
+    • CocoaPods version 1.16.2
+
+[✓] Chrome - develop for the web [10ms]
+    • Chrome at /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+
+[✓] Connected device (5 available) [7.0s]
+    • clicknow_admin (mobile)        • 6593948A-B5D7-4666-9325-0584656BED6C • ios            • com.apple.CoreSimulator.SimRuntime.iOS-26-5 (simulator)
+    • clicknow_customer (mobile)     • 0B6775E4-2996-4C43-A212-B5E279AB1406 • ios            • com.apple.CoreSimulator.SimRuntime.iOS-26-5 (simulator)
+    • clicknow_professional (mobile) • 2EB8BC4B-5B2B-432B-ADDC-70B120988E6B • ios            • com.apple.CoreSimulator.SimRuntime.iOS-26-5 (simulator)
+    • macOS (desktop)                • macos                                • darwin-arm64   • macOS 26.3.1 25D771280a darwin-arm64
+    • Chrome (web)                   • chrome                               • web-javascript • Google Chrome 153.0.8010.48
+
+[✓] Network resources [9.4s]
+    • All expected network resources are available.
+
+! Doctor found issues in 1 category.
+```

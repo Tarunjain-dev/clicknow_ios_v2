@@ -1,0 +1,76 @@
+[debug] [2026-09-17T05:36:20.930Z] ----------------------------------------------------------------------
+[debug] [2026-09-17T05:36:20.937Z] Command:       /Users/kishoresahu/.nvm/versions/node/v24.18.0/bin/node /opt/homebrew/Cellar/firebase-cli/15.26.0/bin/firebase deploy --only functions --project clicknow-4f0d3
+[debug] [2026-09-17T05:36:20.937Z] CLI Version:   15.26.0
+[debug] [2026-09-17T05:36:20.937Z] Platform:      darwin
+[debug] [2026-09-17T05:36:20.937Z] Node Version:  v24.18.0
+[debug] [2026-09-17T05:36:20.937Z] Detected Agent: codex_cli
+[debug] [2026-09-17T05:36:20.937Z] Time:          Thu Sep 17 2026 11:06:20 GMT+0530 (India Standard Time)
+[debug] [2026-09-17T05:36:20.937Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-17T05:36:21.763Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[debug] [2026-09-17T05:36:21.765Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-17T05:36:21.765Z] > authorizing via signed-in user (tarun9dec@gmail.com)
+[debug] [2026-09-17T05:36:21.765Z] [iam] checking project clicknow-4f0d3 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-09-17T05:36:21.777Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:21.777Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:21.778Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3:testIamPermissions [none]
+[debug] [2026-09-17T05:36:21.778Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3:testIamPermissions  x-goog-user-project=clicknow-4f0d3
+[debug] [2026-09-17T05:36:21.778Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-09-17T05:36:23.385Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3:testIamPermissions 200
+[debug] [2026-09-17T05:36:23.386Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-09-17T05:36:23.386Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:23.386Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:23.386Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/clicknow-4f0d3/serviceAccounts/clicknow-4f0d3@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-09-17T05:36:23.386Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/clicknow-4f0d3/serviceAccounts/clicknow-4f0d3@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-09-17T05:36:23.867Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/clicknow-4f0d3/serviceAccounts/clicknow-4f0d3@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-09-17T05:36:23.867Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/clicknow-4f0d3/serviceAccounts/clicknow-4f0d3@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'clicknow-4f0d3'...
+[info] 
+[info] i  deploying functions 
+[debug] [2026-09-17T05:36:23.869Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:23.869Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:23.869Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3 [none]
+[debug] [2026-09-17T05:36:24.277Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3 200
+[debug] [2026-09-17T05:36:24.277Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/clicknow-4f0d3 {"projectNumber":"429039538668","projectId":"clicknow-4f0d3","lifecycleState":"ACTIVE","name":"ClickNow","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-03-11T15:44:41.563795Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-09-17T05:36:24.278Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:24.279Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:24.279Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clicknow-4f0d3/adminSdkConfig [none]
+[debug] [2026-09-17T05:36:25.244Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clicknow-4f0d3/adminSdkConfig 200
+[debug] [2026-09-17T05:36:25.244Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clicknow-4f0d3/adminSdkConfig {"projectId":"clicknow-4f0d3","storageBucket":"clicknow-4f0d3.firebasestorage.app"}
+[debug] [2026-09-17T05:36:25.245Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:25.245Z] Checked if tokens are valid: true, expires at: 1789625750864
+[debug] [2026-09-17T05:36:25.246Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clicknow-4f0d3/configs [none]
+[debug] [2026-09-17T05:36:26.633Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clicknow-4f0d3/configs 200
+[debug] [2026-09-17T05:36:26.633Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clicknow-4f0d3/configs {}
+[debug] [2026-09-17T05:36:26.636Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[debug] [2026-09-17T05:36:29.560Z] > [functions] package.json contents: {
+  "name": "clicknow-functions",
+  "description": "Cloud Functions for ClickNow payments",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "node --check index.js",
+    "test": "node --test",
+    "reconcile:bookings": "node scripts/reconcile-bookings.js",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0",
+    "razorpay": "^2.9.5"
+  },
+  "devDependencies": {}
+}
+[debug] [2026-09-17T05:36:29.561Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2026-09-17T05:36:29.563Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-09-17T05:36:29.570Z] Found firebase-functions binary at '/Users/kishoresahu/Documents/royal_it_mobile_projects/clicknow_version2/functions/node_modules/.bin/firebase-functions'
