@@ -288,7 +288,7 @@ class CustomerDashboardScreen extends StatelessWidget {
         crossAxisCount: 3,
         crossAxisSpacing: ResponsiveUtility.width(8),
         mainAxisSpacing: ResponsiveUtility.height(8),
-        childAspectRatio: 0.56,
+        childAspectRatio: 0.43,
       ),
       itemBuilder: (_, index) {
         final service = controller.services[index];

@@ -304,15 +304,6 @@ class _ProfessionalReviewDetailsScreenState extends State<ProfessionalReviewDeta
             ...profile.serviceSpecialities.map((item) => _bullet(item)),
           const SizedBox(height: 10),
           _statusInfoCard(
-            title: "Available for urgent bookings",
-            subtitle: "Last-minute requests within 24 hours",
-            label: profile.urgentBookingAvailable ? "Available" : "Unavailable",
-            color: profile.urgentBookingAvailable
-                ? const Color(0xff0CDB6D)
-                : const Color(0xffFFB300),
-          ),
-          const SizedBox(height: 8),
-          _statusInfoCard(
             title: "Willing to travel outside city",
             subtitle: "For additional charges",
             label: profile.willingToTravel ? "Agreed" : "Not Agreed",
@@ -330,14 +321,6 @@ class _ProfessionalReviewDetailsScreenState extends State<ProfessionalReviewDeta
                 : const Color(0xffFFB300),
           ),
           const SizedBox(height: 8),
-          _statusInfoCard(
-            title: "Platform Commission Agreement",
-            subtitle: "I agree to the 15% platform commission on bookings.",
-            label: profile.platformCommissionAccepted ? "Agreed" : "Pending",
-            color: profile.platformCommissionAccepted
-                ? const Color(0xff0CDB6D)
-                : const Color(0xffFFB300),
-          ),
         ],
       ),
     );

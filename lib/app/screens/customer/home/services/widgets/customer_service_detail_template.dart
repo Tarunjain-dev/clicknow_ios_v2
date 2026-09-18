@@ -44,7 +44,6 @@ class CustomerServiceDetailScreen extends StatefulWidget {
 
 class _CustomerServiceDetailScreenState
     extends State<CustomerServiceDetailScreen> {
-  static const double _fixedGstPercent = 18.0;
   static const double _defaultIndiaLatitude = 22.9734;
   static const double _defaultIndiaLongitude = 78.6569;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -1175,7 +1174,7 @@ class _CustomerServiceDetailScreenState
                 ],
                 _priceRow(
                   scale,
-                  'GST (${_formatPercent(_fixedGstPercent)}%)',
+                  'GST (${_formatPercent(_gstPercent)}%)',
                   'Rs.${_formatAmount(calculatedPrice.gstAmount)}',
                   isDark: isDark,
                 ),
@@ -1400,7 +1399,7 @@ class _CustomerServiceDetailScreenState
         ? int.tryParse(_durationController.text.trim()) ?? 0
         : 1;
     final subtotal = ratePerHour * durationHours;
-    final gstAmount = ((subtotal * _fixedGstPercent) / 100).round();
+    final gstAmount = ((_gstPercent * subtotal) / 100).round();
     final totalAmount = subtotal + gstAmount;
     return _ServiceCalculatedPrice(
       ratePerHour: ratePerHour,
@@ -2248,7 +2247,7 @@ class _CustomerServiceDetailScreenState
       planKey: selectedPlan.key,
       planName: selectedPlan.name,
       basePrice: calculatedPrice.subtotal,
-      gstPercent: _fixedGstPercent,
+      gstPercent: _gstPercent,
       gstAmount: calculatedPrice.gstAmount,
       totalAmount: calculatedPrice.totalAmount,
       eventDate: _selectedEventDate,

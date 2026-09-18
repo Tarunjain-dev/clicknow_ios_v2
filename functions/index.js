@@ -299,6 +299,12 @@ exports.createPaymentOrder = functions.https.onRequest(
         serviceSubtotal: pricingBase.serviceSubtotal,
         rateAmount: pricingBase.rateAmount,
         quantityOrDuration: pricingBase.quantityOrDuration,
+        gstPercent: positiveNumber(
+          asObject(booking.pricingSnapshot).gstRate ||
+            asObject(booking.pricingSnapshot).gstPercent ||
+            booking.gstPercent,
+          18,
+        ),
         paymentMode,
         discountAmount: coupon.discountAmount,
         couponCode: coupon.appliedCode,
@@ -379,6 +385,7 @@ exports.quoteCheckoutPayment = functions.https.onRequest(
       serviceSubtotal: pricing.serviceSubtotal,
       rateAmount: pricing.rateAmount,
       quantityOrDuration: pricing.quantityOrDuration,
+      gstPercent: pricing.gstRate,
       paymentMode,
       discountAmount: coupon.discountAmount,
       couponCode: coupon.appliedCode,
@@ -3024,6 +3031,7 @@ function paymentQuote({
   serviceSubtotal,
   rateAmount,
   quantityOrDuration,
+  gstPercent = 18,
   paymentMode,
   discountAmount,
   couponCode,
@@ -3033,6 +3041,7 @@ function paymentQuote({
     serviceSubtotal,
     rateAmount,
     quantityOrDuration,
+    gstPercent,
     paymentMode,
     discountAmount,
     couponCode,
